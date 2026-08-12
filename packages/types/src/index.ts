@@ -283,6 +283,98 @@ export interface RecalculateResult {
 }
 
 // ---------------------------------------------------------------------------
+// Manual 3D geometry adjustment — PATCH /scan/{id}/adjust-geometry
+// ---------------------------------------------------------------------------
+
+export interface AdjustGeometryRequest {
+  center_x: number;
+  center_y: number;
+  center_z: number;
+  dir_x: number;
+  dir_y: number;
+  dir_z: number;
+  radius_units: number;
+  h_min: number;
+  h_max: number;
+  h_target: number;
+}
+
+export interface AdjustGeometryResult {
+  success: boolean;
+  tree_code: string;
+  dbh_cm: number;
+  height_m: number;
+  biomassa_kg: number;
+  karbon_kg: number;
+  co2e_kg: number;
+  scale_status: ScaleStatus;
+  height_used: HeightUsed;
+  total_height_used_m: number;
+  segment_height_m: number;
+  height_fallback_reason: string;
+  height_validated: boolean;
+  height_validation_reason: string;
+  quality_status: QualityStatus;
+  root_to_shoot_ratio: number;
+  co2e_uncertainty_pct: number;
+  co2e_low_kg: number;
+  co2e_high_kg: number;
+}
+
+// ---------------------------------------------------------------------------
+// Direct-to-R2 video upload — GET /video_upload_url, POST /upload_video
+// ---------------------------------------------------------------------------
+
+export interface VideoUploadUrlResponse {
+  /** Presigned R2 PUT URL, valid 5 minutes */
+  url: string;
+  /** R2 object key to pass back to notifyUploadVideo() */
+  key: string;
+}
+
+export interface NotifyUploadVideoRequest {
+  r2_key: string;
+  frames?: number;
+  blur_thresh?: number;
+}
+
+// ---------------------------------------------------------------------------
+// Plot management requests
+// ---------------------------------------------------------------------------
+
+export interface UpdatePlotRequest {
+  name?: string;
+  description?: string;
+  privacy?: "public" | "private";
+  gps_centroid_lat?: number;
+  gps_centroid_lon?: number;
+  target_co2e_kg?: number;
+  area_x1?: number;
+  area_y1?: number;
+  area_x2?: number;
+  area_y2?: number;
+}
+
+export interface RemoveScanRequest {
+  tree_code: string;
+}
+
+export interface GridPositionItem {
+  tree_code: string;
+  grid_position_x: number;
+  grid_position_y: number;
+}
+
+export interface SaveLayoutRequest {
+  layout: GridPositionItem[];
+  area_x1?: number;
+  area_y1?: number;
+  area_x2?: number;
+  area_y2?: number;
+  areas?: PlotArea[];
+}
+
+// ---------------------------------------------------------------------------
 // API Response wrappers
 // ---------------------------------------------------------------------------
 

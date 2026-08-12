@@ -15,10 +15,16 @@ import type {
   ReconstructRequest,
   RecalculateResult,
   Recalculate2DRequest,
+  AdjustGeometryRequest,
+  AdjustGeometryResult,
   ScansListResponse,
   PlotsListResponse,
   UploadResponse,
   ReconstructResponse,
+  VideoUploadUrlResponse,
+  UpdatePlotRequest,
+  RemoveScanRequest,
+  SaveLayoutRequest,
 } from "@vora/types";
 
 // ---------------------------------------------------------------------------
@@ -225,15 +231,36 @@ export function createVoraClient(config: VoraClientConfig) {
       return apiFetch("GET", "/status");
     },
 
-    async uploadVideo(
-      videoFile: File | Blob,
-      options?: { frames?: number; blurThresh?: number }
-    ): Promise<UploadResponse> {
-      const fd = new FormData();
-      fd.append("video", videoFile);
-      if (options?.frames != null) fd.append("frames", options.frames.toString());
-      if (options?.blurThresh != null) fd.append("blur_thresh", options.blurThresh.toString());
-      return apiFetch("POST", "/upload_video", { formData: fd });
+    /**
+     * Step 1 of the direct-to-R2 video upload flow: request a short-lived
+     * presigned PUT URL. The video bytes never pass through this backend —
+     * step 2 is a raw `PUT` to the returned `url` (see `uploadFileToR2`),
+     * then step 3 is `notifyUploadVideo()` below.
+     */
+    async getVideoUploadUrl(
+      filename: string,
+      contentType = "video/mp4"
+    ): Promise<VideoUploadUrlResponse> {
+      const qs = new URLSearchParams({ filename, content_type: contentType });
+      return apiFetch("GET", `/video_upload_url?${qs.toString()}`);
+    },
+
+    /**
+     * Step 3: tell the backend the R2 upload (step 2) finished, so it can
+     * queue frame extraction. Poll `getStatus()` afterwards.
+     */
+    async notifyUploadVideo(options: {
+      r2Key: string;
+      frames?: number;
+      blurThresh?: number;
+    }): Promise<UploadResponse> {
+      return apiFetch("POST", "/upload_video", {
+        body: {
+          r2_key: options.r2Key,
+          frames: options.frames,
+          blur_thresh: options.blurThresh,
+        },
+      });
     },
 
     async uploadPhotos(photos: (File | Blob)[]): Promise<UploadResponse> {
@@ -286,6 +313,14 @@ export function createVoraClient(config: VoraClientConfig) {
       req: Recalculate2DRequest
     ): Promise<RecalculateResult> {
       return apiFetch("PATCH", `/scan/${scanId}/recalculate`, { body: req });
+    },
+
+    /** Manual 3D transform-controls override (cylinder geometry in raw point-cloud space). */
+    async adjustGeometry(
+      scanId: number,
+      req: AdjustGeometryRequest
+    ): Promise<AdjustGeometryResult> {
+      return apiFetch("PATCH", `/scan/${scanId}/adjust-geometry`, { body: req });
     },
 
     async delete(treeCode: string): Promise<void> {
@@ -342,6 +377,31 @@ export function createVoraClient(config: VoraClientConfig) {
     async getUserScans(userId: number): Promise<{ scans: ScanRecord[] }> {
       return apiFetch("GET", `/users/${userId}/scans`);
     },
+
+    /** Owner-only: update plot metadata (name/description/privacy/target/GPS). */
+    async update(
+      plotId: number,
+      body: UpdatePlotRequest
+    ): Promise<{ success: boolean }> {
+      return apiFetch("PATCH", `/plots/${plotId}`, { body });
+    },
+
+    /** Owner-only: detach a scan from this plot (clears its grid position too). */
+    async removeScan(
+      plotId: number,
+      treeCode: string
+    ): Promise<{ success: boolean; message: string }> {
+      const body: RemoveScanRequest = { tree_code: treeCode };
+      return apiFetch("POST", `/plots/${plotId}/remove-scan`, { body });
+    },
+
+    /** Owner-only: persist tree grid positions + drawn area boxes (auto-save, e.g. 500ms debounce). */
+    async saveLayout(
+      plotId: number,
+      body: SaveLayoutRequest
+    ): Promise<{ success: boolean }> {
+      return apiFetch("POST", `/plots/${plotId}/layout`, { body });
+    },
   };
 
   // -----------------------------------------------------------------------
@@ -368,6 +428,36 @@ export function createVoraClient(config: VoraClientConfig) {
 }
 
 export type VoraClient = ReturnType<typeof createVoraClient>;
+
+// ---------------------------------------------------------------------------
+// Direct-to-R2 upload — step 2 of the 3-step video upload flow
+// (step 1: pipeline.getVideoUploadUrl, step 3: pipeline.notifyUploadVideo)
+// ---------------------------------------------------------------------------
+
+/**
+ * PUT raw file bytes straight to the presigned R2 URL. This goes to Cloudflare
+ * R2, not the Vora backend, so it deliberately bypasses `apiFetch` (no auth
+ * header, different origin).
+ *
+ * On React Native, prefer `expo-file-system`'s `uploadAsync`/`createUploadTask`
+ * over this helper for large video files — it streams from disk with upload
+ * progress instead of buffering the whole file into a JS `Blob`. This plain
+ * `fetch`-based helper is a web-compatible fallback (or fine for small files).
+ */
+export async function uploadFileToR2(
+  presignedUrl: string,
+  body: BodyInit,
+  contentType?: string
+): Promise<void> {
+  const res = await fetch(presignedUrl, {
+    method: "PUT",
+    headers: contentType ? { "Content-Type": contentType } : undefined,
+    body,
+  });
+  if (!res.ok) {
+    throw new VoraApiError(res.status, `R2 upload failed: HTTP ${res.status}`, presignedUrl);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Polling utility — dipakai untuk polling /status selama proses rekonstruksi

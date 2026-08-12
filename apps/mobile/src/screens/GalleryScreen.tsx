@@ -7,32 +7,37 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
-  SafeAreaView,
-  StatusBar,
   Image,
+  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
-import { fetchScans, API_BASE_URL } from '../lib/api';
-import { Scan } from '../types';
+import type { ScanRecord } from '@vora/types';
+import { formatDBH, formatHeight, formatCO2eCompact, getDisplaySpecies, isScanValid } from '@vora/domain';
+import { client } from '../lib/voraClient';
+import { API_BASE_URL } from '../lib/config';
 
 export default function GalleryScreen() {
   const navigation = useNavigation<any>();
 
   const {
-    data: scans,
+    data,
     isLoading,
     isError,
     error,
     refetch,
     isRefetching,
-  } = useQuery<Scan[]>({
-    queryKey: ['scans'],
-    queryFn: fetchScans,
+  } = useQuery({
+    queryKey: ['scans', 'gallery'],
+    queryFn: () => client.scans.getList({ limit: 50 }),
     retry: 1,
   });
 
-  const displayScans = scans || [];
+  // Backend returns rows with dbh_cm IS NULL filtered out by default (`/scans`),
+  // but we still guard client-side via isScanValid() in case a stale/failed
+  // scan ever leaks through.
+  const displayScans = (data?.scans ?? []).filter(isScanValid);
 
   // 1. Loading State
   if (isLoading) {
@@ -102,7 +107,7 @@ export default function GalleryScreen() {
           </Text>
           <TouchableOpacity
             style={styles.primaryButton}
-            onPress={() => navigation.navigate('Upload')}
+            onPress={() => navigation.navigate('Scan')}
             activeOpacity={0.8}
           >
             <Text style={styles.primaryButtonText}>Start Your First Scan</Text>
@@ -136,79 +141,73 @@ export default function GalleryScreen() {
           </Text>
         </View>
 
-        {displayScans.map((scan) => (
-          <TouchableOpacity
-            key={scan.id}
-            style={styles.card}
-            activeOpacity={0.7}
-            onPress={() => {
-              navigation.navigate('Upload', {
-                screen: 'ScanResult',
-                params: { jobId: scan.id, scanData: scan },
-              });
-            }}
-          >
-            {/* Image Preview (Step 7) */}
-            {scan.image_url && (
-              <Image
-                source={{ uri: scan.image_url }}
-                style={styles.cardImage}
-                resizeMode="cover"
-              />
-            )}
+        {displayScans.map((scan) => {
+          const species = getDisplaySpecies(scan.species_predictions);
+          return (
+            <TouchableOpacity
+              key={scan.id}
+              style={styles.card}
+              activeOpacity={0.7}
+              onPress={() => {
+                navigation.navigate('Scan', {
+                  screen: 'ScanResult',
+                  params: { treeCode: scan.tree_code },
+                });
+              }}
+            >
+              {scan.thumbnail_url && (
+                <Image
+                  source={{ uri: scan.thumbnail_url }}
+                  style={styles.cardImage}
+                  resizeMode="cover"
+                />
+              )}
 
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardDate}>
-                {new Date(scan.created_at).toLocaleDateString(undefined, {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                })}
-              </Text>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>Processed</Text>
-              </View>
-            </View>
-
-            {/* Metrics Row */}
-            <View style={styles.metricsRow}>
-              <View style={styles.metricCol}>
-                <Text style={styles.metricLabel}>DBH</Text>
-                <Text style={styles.metricValue}>
-                  {typeof scan.dbh === 'number' ? scan.dbh.toFixed(1) : scan.dbh} <Text style={styles.metricUnit}>cm</Text>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardDate}>
+                  {new Date(scan.scan_date).toLocaleDateString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                  })}
                 </Text>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{scan.tree_code}</Text>
+                </View>
               </View>
 
-              <View style={styles.metricDivider} />
+              <View style={styles.metricsRow}>
+                <View style={styles.metricCol}>
+                  <Text style={styles.metricLabel}>DBH</Text>
+                  <Text style={styles.metricValue}>{formatDBH(scan.dbh_cm)}</Text>
+                </View>
 
-              <View style={styles.metricCol}>
-                <Text style={styles.metricLabel}>Height</Text>
-                <Text style={styles.metricValue}>
-                  {typeof scan.height === 'number' ? scan.height.toFixed(1) : scan.height} <Text style={styles.metricUnit}>m</Text>
-                </Text>
+                <View style={styles.metricDivider} />
+
+                <View style={styles.metricCol}>
+                  <Text style={styles.metricLabel}>Height</Text>
+                  <Text style={styles.metricValue}>{formatHeight(scan.tinggi_m)}</Text>
+                </View>
+
+                <View style={styles.metricDivider} />
+
+                <View style={styles.metricCol}>
+                  <Text style={styles.metricLabel}>CO2e</Text>
+                  <Text style={[styles.metricValue, styles.carbonHighlight]}>
+                    {formatCO2eCompact(scan.co2e_kg)}
+                  </Text>
+                </View>
               </View>
 
-              <View style={styles.metricDivider} />
-
-              <View style={styles.metricCol}>
-                <Text style={styles.metricLabel}>CO2e</Text>
-                <Text style={[styles.metricValue, styles.carbonHighlight]}>
-                  {typeof scan.co2e === 'number' ? scan.co2e.toFixed(0) : scan.co2e} <Text style={styles.carbonUnit}>kg</Text>
-                </Text>
-              </View>
-            </View>
-
-            {/* Species Section */}
-            {scan.species_classification && (
               <View style={styles.speciesContainer}>
                 <Text style={styles.speciesIcon}>🌿</Text>
                 <Text style={styles.speciesText} numberOfLines={1}>
-                  {scan.species_classification.top_match}
+                  {species.displayName}
                 </Text>
               </View>
-            )}
-          </TouchableOpacity>
-        ))}
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
     </SafeAreaView>
   );
@@ -440,17 +439,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1f2937',
   },
-  metricUnit: {
-    fontSize: 12,
-    fontWeight: 'normal',
-    color: '#6b7280',
-  },
   carbonHighlight: {
-    color: '#16a34a',
-  },
-  carbonUnit: {
-    fontSize: 12,
-    fontWeight: 'bold',
     color: '#16a34a',
   },
   speciesContainer: {

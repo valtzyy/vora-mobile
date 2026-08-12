@@ -1,62 +1,65 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
+import { View, Text, ScrollView, StatusBar, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../lib/AuthContext';
+import VoraButton from '../components/VoraButton';
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
+  const { user, logout } = useAuth();
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
-      <StatusBar barStyle="light-content" backgroundColor="#16a34a" />
+    <ScrollView className="flex-1 bg-white" showsVerticalScrollIndicator={false}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fef4e2" />
       
       {/* Hero Section */}
-      <View style={styles.heroSection}>
-        <Text style={styles.heroTitle}>Vora</Text>
-        <Text style={styles.heroSubtitle}>
-          Measure tree carbon from smartphone video
+      <View className="bg-vora-cream px-6 pt-16 pb-12 rounded-b-[2rem]">
+        <Text className="text-4xl font-serif text-vora-dark mb-2">Vora</Text>
+        <Text className="text-[15px] font-sans text-vora-dark/80 leading-6">
+          Measure tree carbon from smartphone video. 
         </Text>
       </View>
 
       {/* Content Section */}
-      <View style={styles.contentSection}>
-        <Text style={styles.sectionTitle}>How it works</Text>
+      <View className="px-6 pt-10 pb-16">
+        <Text className="text-2xl font-serif text-vora-dark mb-6">How it works</Text>
         
         {/* Steps */}
-        <View style={styles.stepsContainer}>
+        <View className="mb-10 space-y-5">
           {/* Step 1 */}
-          <View style={styles.stepItem}>
-            <View style={styles.stepBadge}>
-              <Text style={styles.stepNumber}>1</Text>
+          <View className="flex-row items-start">
+            <View className="w-10 h-10 rounded-full bg-vora-cream justify-center items-center mr-4">
+              <Text className="text-lg font-sansBold text-vora-green">1</Text>
             </View>
-            <View style={styles.stepContent}>
-              <Text style={styles.stepHeading}>Record Video</Text>
-              <Text style={styles.stepDescription}>
+            <View className="flex-1 mt-1">
+              <Text className="text-base font-sansMedium text-vora-dark mb-1">Record Video</Text>
+              <Text className="text-sm font-sans text-gray-500 leading-5">
                 Film a short video around the tree trunk using your smartphone
               </Text>
             </View>
           </View>
 
           {/* Step 2 */}
-          <View style={styles.stepItem}>
-            <View style={styles.stepBadge}>
-              <Text style={styles.stepNumber}>2</Text>
+          <View className="flex-row items-start">
+            <View className="w-10 h-10 rounded-full bg-vora-cream justify-center items-center mr-4">
+              <Text className="text-lg font-sansBold text-vora-green">2</Text>
             </View>
-            <View style={styles.stepContent}>
-              <Text style={styles.stepHeading}>Process</Text>
-              <Text style={styles.stepDescription}>
+            <View className="flex-1 mt-1">
+              <Text className="text-base font-sansMedium text-vora-dark mb-1">Process</Text>
+              <Text className="text-sm font-sans text-gray-500 leading-5">
                 Our AI reconstructs the tree in 3D and calculates carbon content
               </Text>
             </View>
           </View>
 
           {/* Step 3 */}
-          <View style={styles.stepItem}>
-            <View style={styles.stepBadge}>
-              <Text style={styles.stepNumber}>3</Text>
+          <View className="flex-row items-start">
+            <View className="w-10 h-10 rounded-full bg-vora-cream justify-center items-center mr-4">
+              <Text className="text-lg font-sansBold text-vora-green">3</Text>
             </View>
-            <View style={styles.stepContent}>
-              <Text style={styles.stepHeading}>View Results</Text>
-              <Text style={styles.stepDescription}>
+            <View className="flex-1 mt-1">
+              <Text className="text-base font-sansMedium text-vora-dark mb-1">View Results</Text>
+              <Text className="text-sm font-sans text-gray-500 leading-5">
                 See DBH, height, biomass, and CO2e estimation instantly
               </Text>
             </View>
@@ -64,126 +67,47 @@ export default function HomeScreen() {
         </View>
 
         {/* CTA Buttons */}
-        <TouchableOpacity 
-          style={styles.primaryButton}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate('Upload')}
-        >
-          <Text style={styles.primaryButtonText}>Start New Scan</Text>
-        </TouchableOpacity>
+        <VoraButton
+          title="Start New Scan"
+          variant="primary"
+          onPress={() => navigation.navigate('Scan')}
+          className="mb-4"
+        />
 
-        <TouchableOpacity 
-          style={styles.secondaryButton}
-          activeOpacity={0.8}
+        <VoraButton
+          title="View Past Scans"
+          variant="secondary"
           onPress={() => navigation.navigate('Gallery')}
-        >
-          <Text style={styles.secondaryButtonText}>View Past Scans</Text>
-        </TouchableOpacity>
+          className="mb-10"
+        />
+
+        {/* User Session Management — scanning works fully without an account;
+            this just surfaces sign-in state, it never blocks the flow above. */}
+        <View className="border-t border-gray-200 pt-8 mt-4 items-center">
+          {user ? (
+            <>
+              <Text className="text-sm font-sans text-gray-400 mb-4">
+                Signed in as {user.display_name}
+              </Text>
+              <TouchableOpacity onPress={logout} className="px-6 py-3 rounded-lg border border-red-200 bg-red-50">
+                <Text className="text-red-600 font-sansMedium">Log Out</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text className="text-sm font-sans text-gray-400 mb-4">
+                Browsing without an account — sign in to save scans to plots
+              </Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Account')}
+                className="px-6 py-3 rounded-lg border border-vora-green bg-vora-cream"
+              >
+                <Text className="text-vora-green font-sansMedium">Sign In</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
       </View>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  contentContainer: {
-    paddingBottom: 40,
-  },
-  heroSection: {
-    backgroundColor: '#16a34a',
-    paddingHorizontal: 24,
-    paddingTop: 48,
-    paddingBottom: 40,
-  },
-  heroTitle: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 8,
-  },
-  heroSubtitle: {
-    fontSize: 16,
-    color: '#dcfce7',
-    lineHeight: 24,
-  },
-  contentSection: {
-    paddingHorizontal: 24,
-    paddingTop: 32,
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 20,
-  },
-  stepsContainer: {
-    marginBottom: 32,
-  },
-  stepItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 20,
-  },
-  stepBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#e8f5e9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-    marginTop: 2,
-  },
-  stepNumber: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#16a34a',
-  },
-  stepContent: {
-    flex: 1,
-  },
-  stepHeading: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1f2937',
-    marginBottom: 4,
-  },
-  stepDescription: {
-    fontSize: 14,
-    color: '#6b7280',
-    lineHeight: 20,
-  },
-  primaryButton: {
-    backgroundColor: '#16a34a',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    marginBottom: 12,
-    alignItems: 'center',
-    shadowColor: '#16a34a',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  primaryButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  secondaryButton: {
-    backgroundColor: '#f3f4f6',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    color: '#374151',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-});

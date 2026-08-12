@@ -6,9 +6,9 @@
     "mobile": "pnpm --filter @vora/mobile start",
     "mobile:android": "pnpm --filter @vora/mobile android",
     "mobile:ios": "pnpm --filter @vora/mobile ios",
-    "build:packages": "pnpm --filter './packages/*' build",
-    "type-check": "pnpm --filter './packages/*' type-check && pnpm --filter @vora/mobile type-check",
-    "lint": "pnpm --filter './packages/*' lint && pnpm --filter @vora/mobile lint"
+    "build:packages": "pnpm --filter \"./packages/*\" build",
+    "type-check": "pnpm --filter \"./packages/*\" type-check && pnpm --filter @vora/mobile type-check",
+    "lint": "pnpm --filter \"./packages/*\" lint && pnpm --filter @vora/mobile lint"
   },
   "devDependencies": {
     "typescript": "^5.3.3"
