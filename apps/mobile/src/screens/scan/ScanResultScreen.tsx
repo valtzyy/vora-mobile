@@ -33,6 +33,7 @@ import {
 import type { ScanStackParamList } from '../../navigation/types';
 import { client } from '../../lib/voraClient';
 import { useAuth } from '../../lib/AuthContext';
+import SplatViewer from '../../components/SplatViewer';
 
 type Nav = NativeStackNavigationProp<ScanStackParamList, 'ScanResult'>;
 type Route = RouteProp<ScanStackParamList, 'ScanResult'>;
@@ -47,7 +48,7 @@ export default function ScanResultScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { treeCode } = route.params;
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [selectedScanId, setSelectedScanId] = useState<number | null>(null);
 
   const { data: history, isLoading, isError, error, refetch, isRefetching } = useQuery({
@@ -115,8 +116,19 @@ export default function ScanResultScreen() {
         </View>
 
         <View style={styles.body}>
-          {scan.thumbnail_url && (
-            <Image source={{ uri: scan.thumbnail_url }} style={styles.heroImage} resizeMode="cover" />
+          {scan.splat_file_url ? (
+            <View style={styles.splatWrap}>
+              <SplatViewer
+                treeCode={scan.tree_code}
+                splatFileUrl={scan.splat_file_url}
+                token={token}
+                onMetricsUpdated={() => refetch()}
+              />
+            </View>
+          ) : (
+            scan.thumbnail_url && (
+              <Image source={{ uri: scan.thumbnail_url }} style={styles.heroImage} resizeMode="cover" />
+            )
           )}
 
           {/* Carbon headline + uncertainty range */}
@@ -279,6 +291,7 @@ const styles = StyleSheet.create({
   heroTitle: { fontSize: 28, fontWeight: 'bold', color: '#ffffff', fontFamily: 'monospace' },
   heroDate: { fontSize: 14, color: '#dcfce7', marginTop: 4 },
   body: { paddingHorizontal: 20, paddingTop: 16 },
+  splatWrap: { marginTop: -20, marginBottom: 20 },
   heroImage: {
     width: '100%',
     height: 200,

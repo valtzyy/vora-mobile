@@ -5,6 +5,8 @@ import { client, registerUnauthorizedHandler } from './voraClient';
 
 type AuthContextType = {
   user: User | null;
+  /** Current Bearer token, if logged in — e.g. to forward into the splat viewer WebView. */
+  token: string | null;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, password: string, displayName: string) => Promise<void>;
@@ -18,6 +20,7 @@ const USER_KEY = 'vora_user_data';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const clearSession = useCallback(async () => {
@@ -25,6 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await SecureStore.deleteItemAsync(USER_KEY);
     client.setBearerToken(null);
     setUser(null);
+    setToken(null);
   }, []);
 
   useEffect(() => {
@@ -50,6 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const me = await client.auth.getMe();
         if (me) {
           setUser(me);
+          setToken(storedToken);
           await SecureStore.setItemAsync(USER_KEY, JSON.stringify(me));
         } else {
           await clearSession();
@@ -68,6 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await SecureStore.setItemAsync(TOKEN_KEY, result.access_token);
     await SecureStore.setItemAsync(USER_KEY, JSON.stringify(result.user));
     setUser(result.user);
+    setToken(result.access_token);
   };
 
   const register = async (username: string, password: string, displayName: string) => {
@@ -84,7 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
