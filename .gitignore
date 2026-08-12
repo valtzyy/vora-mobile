@@ -1,0 +1,10 @@
+node_modules/
+.expo/
+dist/
+build/
+*.tgz
+.env
+.env.local
+.env.*.local
+android/
+ios/
