@@ -12,6 +12,7 @@ import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ScanStack from './ScanStack';
+import PlotsStack from './PlotsStack';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -85,6 +86,16 @@ function AppTabs() {
         }}
       />
       <Tab.Screen
+        name="Plots"
+        component={PlotsStack}
+        options={{
+          tabBarLabel: 'Plots',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="leaf-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
         name="Account"
         component={AccountTab}
         options={{
@@ -110,8 +121,8 @@ function NavigationContent() {
   }
 
   // Always render the full app — scanning and browsing work anonymously,
-  // matching the web app. Only the Account tab (and, once built, Plots
-  // create/claim screens) require being signed in.
+  // matching the web app. Only the Account tab and Plots create/claim/edit
+  // actions require being signed in (enforced inside those screens).
   return <AppTabs />;
 }
 

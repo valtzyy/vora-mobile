@@ -9,7 +9,6 @@ import type {
   PipelineStatus,
   ScanRecord,
   Plot,
-  PlotAggregation,
   User,
   AuthTokenResponse,
   ReconstructRequest,
@@ -19,6 +18,9 @@ import type {
   AdjustGeometryResult,
   ScansListResponse,
   PlotsListResponse,
+  PlotDetailResponse,
+  CreatePlotRequest,
+  CreatePlotResponse,
   UploadResponse,
   ReconstructResponse,
   VideoUploadUrlResponse,
@@ -344,20 +346,11 @@ export function createVoraClient(config: VoraClientConfig) {
       return apiFetch("GET", "/plots");
     },
 
-    async getDetail(
-      plotCode: string
-    ): Promise<{ plot: Plot; scans: ScanRecord[]; aggregation: PlotAggregation }> {
+    async getDetail(plotCode: string): Promise<PlotDetailResponse> {
       return apiFetch("GET", `/plots/${encodeURIComponent(plotCode)}`);
     },
 
-    async create(data: {
-      name: string;
-      description?: string;
-      privacy?: "public" | "private";
-      gps_centroid_lat?: number;
-      gps_centroid_lon?: number;
-      target_co2e_kg?: number;
-    }): Promise<{ plot: Plot }> {
+    async create(data: CreatePlotRequest): Promise<CreatePlotResponse> {
       return apiFetch("POST", "/plots", { body: data });
     },
 

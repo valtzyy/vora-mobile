@@ -4,3 +4,9 @@ export type ScanStackParamList = {
   ScanProcessing: { treeCode: string };
   ScanResult: { treeCode: string };
 };
+
+export type PlotsStackParamList = {
+  PlotsList: undefined;
+  PlotDetail: { plotCode: string };
+  CreatePlot: undefined;
+};

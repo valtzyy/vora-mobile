@@ -165,6 +165,8 @@ export interface ScanRecord {
   // Plot association
   plot_id?: number | null;
   claimed_by_user_id?: number | null;
+  grid_position_x?: number | null;
+  grid_position_y?: number | null;
   // 3D geometry overlay
   geometry_3d?: Geometry3D | string | null;
 }
@@ -223,7 +225,10 @@ export interface Plot {
   gps_centroid_lon: number | null;
   session_active: boolean;
   created_at: string;
-  owner: PlotOwner;
+  // `owner` is only populated by GET /plots/{plot_code} (detail); the list
+  // endpoints (GET /plots, GET /users/{id}/plots) return the raw plot row
+  // without a joined owner object.
+  owner?: PlotOwner;
   owner_user_id?: number;
   target_co2e_kg: number | null;
   area_x1?: number | null;
@@ -231,6 +236,35 @@ export interface Plot {
   area_x2?: number | null;
   area_y2?: number | null;
   areas?: PlotArea[];
+  // Only populated by the list endpoints (GET /plots, GET /users/{id}/plots),
+  // which enrich each row with a per-plot scan aggregate. GET /plots/{code}
+  // (detail) returns these as sibling top-level fields instead (`scans_count`,
+  // `aggregation.total_co2e_kg`) — see PlotDetailResponse below.
+  scans_count?: number;
+  total_co2e_kg?: number;
+  thumbnails?: string[];
+}
+
+export interface CreatePlotRequest {
+  name: string;
+  description?: string;
+  privacy?: "public" | "private";
+  gps_centroid_lat?: number;
+  gps_centroid_lon?: number;
+  target_co2e_kg?: number;
+}
+
+export interface CreatePlotResponse {
+  success: boolean;
+  plot_code: string;
+}
+
+export interface PlotDetailResponse {
+  success: boolean;
+  plot: Plot;
+  scans_count: number;
+  scans: ScanRecord[];
+  aggregation: PlotAggregation;
 }
 
 // ---------------------------------------------------------------------------

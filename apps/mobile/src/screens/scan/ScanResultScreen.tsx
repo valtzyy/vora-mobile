@@ -35,6 +35,7 @@ import { client } from '../../lib/voraClient';
 import { useAuth } from '../../lib/AuthContext';
 import SplatViewer from '../../components/SplatViewer';
 import RecalibrateModal from '../../components/RecalibrateModal';
+import ClaimToPlotModal from '../../components/plots/ClaimToPlotModal';
 
 type Nav = NativeStackNavigationProp<ScanStackParamList, 'ScanResult'>;
 type Route = RouteProp<ScanStackParamList, 'ScanResult'>;
@@ -52,6 +53,7 @@ export default function ScanResultScreen() {
   const { user, token } = useAuth();
   const [selectedScanId, setSelectedScanId] = useState<number | null>(null);
   const [recalibrateOpen, setRecalibrateOpen] = useState(false);
+  const [claimOpen, setClaimOpen] = useState(false);
 
   const { data: history, isLoading, isError, error, refetch, isRefetching } = useQuery({
     queryKey: ['scan-history', treeCode],
@@ -225,16 +227,10 @@ export default function ScanResultScreen() {
             </View>
           )}
 
-          {/* Claim to plot (stubbed until Phase 6) */}
-          {user && (
-            <TouchableOpacity
-              style={styles.claimButton}
-              activeOpacity={0.8}
-              onPress={() => {
-                // Wired up once the Plots feature (Phase 6) lands.
-              }}
-            >
-              <Text style={styles.claimButtonText}>Claim to a Plot (coming soon)</Text>
+          {/* Claim to plot */}
+          {user && !scan.claimed_by_user_id && (
+            <TouchableOpacity style={styles.claimButton} activeOpacity={0.8} onPress={() => setClaimOpen(true)}>
+              <Text style={styles.claimButtonText}>Claim to a Plot</Text>
             </TouchableOpacity>
           )}
 
@@ -266,6 +262,12 @@ export default function ScanResultScreen() {
           onSuccess={() => refetch()}
         />
       )}
+      <ClaimToPlotModal
+        visible={claimOpen}
+        treeCode={scan.tree_code}
+        onClose={() => setClaimOpen(false)}
+        onClaimed={() => refetch()}
+      />
     </SafeAreaView>
   );
 }
