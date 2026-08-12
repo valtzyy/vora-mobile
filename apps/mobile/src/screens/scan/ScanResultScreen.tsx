@@ -34,6 +34,7 @@ import type { ScanStackParamList } from '../../navigation/types';
 import { client } from '../../lib/voraClient';
 import { useAuth } from '../../lib/AuthContext';
 import SplatViewer from '../../components/SplatViewer';
+import RecalibrateModal from '../../components/RecalibrateModal';
 
 type Nav = NativeStackNavigationProp<ScanStackParamList, 'ScanResult'>;
 type Route = RouteProp<ScanStackParamList, 'ScanResult'>;
@@ -50,6 +51,7 @@ export default function ScanResultScreen() {
   const { treeCode } = route.params;
   const { user, token } = useAuth();
   const [selectedScanId, setSelectedScanId] = useState<number | null>(null);
+  const [recalibrateOpen, setRecalibrateOpen] = useState(false);
 
   const { data: history, isLoading, isError, error, refetch, isRefetching } = useQuery({
     queryKey: ['scan-history', treeCode],
@@ -183,6 +185,17 @@ export default function ScanResultScreen() {
             {hasScanGPS(scan) && <CalcRow label="GPS" value={formatGPS(scan.gps_lat, scan.gps_lon)} />}
           </View>
 
+          {/* Manual 2D recalibration */}
+          {scan.thumbnail_url && (
+            <TouchableOpacity
+              style={styles.recalibrateButton}
+              activeOpacity={0.8}
+              onPress={() => setRecalibrateOpen(true)}
+            >
+              <Text style={styles.recalibrateButtonText}>Recalibrate Trunk (2D Photo)</Text>
+            </TouchableOpacity>
+          )}
+
           {/* Warnings panel */}
           {warnings.length > 0 && (
             <View style={styles.warningsBox}>
@@ -243,6 +256,16 @@ export default function ScanResultScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {scan.thumbnail_url && (
+        <RecalibrateModal
+          visible={recalibrateOpen}
+          scanId={scan.id}
+          imageUri={scan.thumbnail_url}
+          onClose={() => setRecalibrateOpen(false)}
+          onSuccess={() => refetch()}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -407,6 +430,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   claimButtonText: { color: '#6b7280', fontSize: 14, fontWeight: '600' },
+  recalibrateButton: {
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  recalibrateButtonText: { color: '#1d4ed8', fontSize: 13, fontWeight: '600' },
   actions: { gap: 12 },
   primaryButton: {
     backgroundColor: '#16a34a',
