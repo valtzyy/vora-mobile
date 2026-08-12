@@ -1,56 +1,48 @@
-# Vora — Tree Carbon Estimation from Video
+# Vora Mobile — Tree Carbon Estimation from Video (React Native/Expo)
 
-Carbon measurement tool menggunakan 3D reconstruction (Gaussian Splatting) dari video smartphone.
+Versi mobile dari [Vora](https://github.com/glacerous/vora) — alat pengukuran karbon pohon dari video smartphone (3D Gaussian Splatting reconstruction + kalkulasi allometrik).
 
-## Apps
+**Untuk teman tim yang mau mencoba menjalankan & menguji app ini, langsung ke → [TESTING_GUIDE.md](./TESTING_GUIDE.md).**
 
-### 📱 Mobile (React Native/Expo)
-- **Status:** MVP Ready (Phase 1 testing)
-- **Location:** `apps/mobile`
-- **Setup:** See [Mobile Setup Guide](#mobile-setup)
-- **Features:** Home, Gallery, Upload, Result Dashboard
+## Struktur Repo
 
-### 🌐 Web (Next.js)
-- **Status:** Fully Working
-- **Location:** `apps/web`
-- **Features:** Landing page, Upload form, Splat 3D Viewer, Gallery, Public Plots
+Monorepo pnpm:
+- `apps/mobile` — aplikasi React Native/Expo (SDK 54)
+- `packages/types` — TypeScript types yang mencerminkan schema backend
+- `packages/domain` — logic formatting & status display (dipakai bareng dengan potensi web)
+- `packages/api-client` — HTTP client typed ke backend FastAPI
 
-### 🔧 Backend (FastAPI)
-- **Status:** Production Deployed
-- **Location:** `apps/backend` atau repository terpisah
-- **API Docs:** [Link ke API docs]
+## Status Fitur
 
-## Mobile Setup
+| Fitur | Status |
+|---|---|
+| Auth (login/register, akses anonim untuk scan) | ✅ |
+| Scan pohon (kamera in-app + file picker, kalibrasi 2 titik, processing, hasil karbon lengkap) | ✅ |
+| Gallery | ✅ |
+| Viewer 3D Gaussian Splat | ⏳ belum |
+| Kalibrasi manual (2D recalculate / 3D adjust-geometry) | ⏳ belum |
+| Fitur Plots (kebun/grup pohon, peta GPS) | ⏳ belum |
+| Multi-user scan bersamaan | ⚠️ backend masih single-flight (satu scan aktif untuk seluruh server) |
 
-### Prerequisites
-- Node.js 18+
-- npm atau pnpm
-- Expo Go app installed on phone (iOS/Android)
-
-### Installation
+## Setup Cepat
 
 ```bash
-# Clone repo
-git clone https://github.com/your-username/vora.git
-cd vora
-
-# Install dependencies
-npm install
-
-# Setup environment
+git clone https://github.com/valtzyy/vora-mobile.git
+cd vora-mobile
+pnpm install
 cd apps/mobile
-echo "EXPO_PUBLIC_API_BASE_URL=https://vora-api.example.com" > .env.local
-
-# Start Expo
-npm start
-
-# Scan QR code dengan Expo Go
+cp .env.example .env.local   # isi EXPO_PUBLIC_API_BASE_URL
+npx expo start -c
 ```
 
-### Testing
+Scan QR code dengan app **Expo Go** (harus support SDK 54) di HP, satu jaringan WiFi dengan laptop.
 
-See [Testing Guide](./docs/TESTING_GUIDE.md)
+Detail lengkap (setup backend lokal vs pakai backend online, checklist testing per fitur, troubleshooting) ada di **[TESTING_GUIDE.md](./TESTING_GUIDE.md)**.
 
-## Web Setup
+## Development
 
-Similar, check web folder docs.
+```bash
+pnpm run type-check   # type-check semua package + app
+```
+
+`apps/mobile/AGENTS.md` — catatan penting: Expo SDK di project ini mungkin beda API-nya dari pengetahuan umum/training data AI assistant manapun. Cek dokumentasi versi yang terpasang sebelum mengubah kode yang menyentuh API Expo.
