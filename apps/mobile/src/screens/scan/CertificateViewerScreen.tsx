@@ -163,70 +163,125 @@ export default function CertificateViewerScreen() {
     <body>
       <div id="loader">
         <div class="spinner"></div>
-        <div>Generating preview...</div>
+        <div id="loader-text">Generating preview...</div>
       </div>
       <div id="viewer"></div>
 
       <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+        // Send logs to React Native
+        function log(msg) {
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'log', message: msg }));
+          }
+        }
 
+        // Show visible errors inside WebView
+        function showError(msg) {
+          var loader = document.getElementById('loader');
+          if (loader) {
+            loader.innerHTML = '<div style="color:#ef4444;text-align:center;padding:24px;font-weight:bold;font-size:16px;">Failed to generate preview<div style="font-size:12px;color:#94a3b8;margin-top:8px;font-weight:normal;">' + msg + '</div></div>';
+          }
+        }
+
+        // Catch general page script errors
+        window.onerror = function(message, source, lineno, colno, error) {
+          log('Window Error: ' + message + ' (' + source + ':' + lineno + ')');
+          showError('Page error: ' + message);
+          return false;
+        };
+
+        // Message listener
         window.addEventListener('message', function(e) {
+          log('Received message from React Native');
           var data;
           try {
             data = JSON.parse(e.data);
           } catch (err) {
+            log('Failed to parse message data: ' + err.message);
             return;
           }
 
           if (!data || data.type !== 'load_pdf') return;
 
           var base64 = data.base64;
-          var binary = atob(base64);
-          var len = binary.length;
-          var bytes = new Uint8Array(len);
-          for (var i = 0; i < len; i++) {
-            bytes[i] = binary.charCodeAt(i);
+          if (!base64) {
+            showError('Received empty PDF data.');
+            return;
           }
 
-          pdfjsLib.getDocument({ data: bytes }).promise.then(function(pdf) {
-            document.getElementById('loader').style.display = 'none';
-            var viewer = document.getElementById('viewer');
+          try {
+            if (typeof pdfjsLib === 'undefined') {
+              throw new Error('PDF.js library failed to load. Please check your internet connection.');
+            }
 
-            var renderPage = function(pageNum) {
-              pdf.getPage(pageNum).then(function(page) {
-                // Render at a high density
-                var viewport = page.getViewport({ scale: 2.0 });
-                var canvas = document.createElement('canvas');
-                var context = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-                viewer.appendChild(canvas);
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
 
-                page.render({
-                  canvasContext: context,
-                  viewport: viewport
-                }).promise.then(function() {
-                  if (pageNum < pdf.numPages) {
-                    renderPage(pageNum + 1);
-                  }
+            var binary = atob(base64);
+            var len = binary.length;
+            var bytes = new Uint8Array(len);
+            for (var i = 0; i < len; i++) {
+              bytes[i] = binary.charCodeAt(i);
+            }
+
+            log('PDF.js: Loading PDF document...');
+            pdfjsLib.getDocument({ data: bytes }).promise.then(function(pdf) {
+              log('PDF.js: Loaded successfully. Total pages: ' + pdf.numPages);
+              document.getElementById('loader').style.display = 'none';
+              var viewer = document.getElementById('viewer');
+
+              var renderPage = function(pageNum) {
+                log('PDF.js: Loading page ' + pageNum);
+                pdf.getPage(pageNum).then(function(page) {
+                  var viewport = page.getViewport({ scale: 2.0 });
+                  var canvas = document.createElement('canvas');
+                  var context = canvas.getContext('2d');
+                  canvas.height = viewport.height;
+                  canvas.width = viewport.width;
+                  viewer.appendChild(canvas);
+
+                  page.render({
+                    canvasContext: context,
+                    viewport: viewport
+                  }).promise.then(function() {
+                    log('PDF.js: Page ' + pageNum + ' render complete');
+                    if (pageNum < pdf.numPages) {
+                      renderPage(pageNum + 1);
+                    }
+                  }).catch(function(rerr) {
+                    log('PDF.js page render error: ' + rerr.message);
+                    showError('Render page error: ' + rerr.message);
+                  });
+                }).catch(function(perr) {
+                  log('PDF.js getPage error: ' + perr.message);
+                  showError('Load page error: ' + perr.message);
                 });
-              });
-            };
-            renderPage(1);
-          }).catch(function(err) {
-            var loader = document.getElementById('loader');
-            loader.innerHTML = '<div style="color:#ef4444;text-align:center;padding:24px;">Failed to render preview: ' + err.message + '</div>';
-          });
+              };
+              renderPage(1);
+            }).catch(function(err) {
+              log('PDF.js loadDocument error: ' + err.message);
+              showError('Parse PDF document error: ' + err.message);
+            });
+          } catch (err) {
+            log('PDF.js script error: ' + err.message);
+            showError(err.message);
+          }
         });
 
-        // Notify React Native that we are ready to receive the PDF
+        // Notify React Native that WebView is ready
+        function notifyReady() {
+          log('WebView is ready');
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ready' }));
+          }
+        }
+
         if (window.ReactNativeWebView) {
-          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ready' }));
+          notifyReady();
         } else {
           var checkInterval = setInterval(function() {
             if (window.ReactNativeWebView) {
               clearInterval(checkInterval);
-              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ready' }));
+              notifyReady();
             }
           }, 50);
         }
@@ -287,6 +342,10 @@ export default function CertificateViewerScreen() {
             originWhitelist={['*']}
             source={{ html: htmlContent }}
             javaScriptEnabled={true}
+            domStorageEnabled={true}
+            allowFileAccess={true}
+            allowUniversalAccessFromFileURLs={true}
+            mixedContentMode="always"
             onMessage={handleMessage}
             style={{ flex: 1, backgroundColor: '#0f172a' }}
             className="flex-1"
