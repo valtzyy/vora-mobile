@@ -83,11 +83,22 @@ export default function CertificateViewerScreen() {
     }
   };
 
-  // Inject PDF data to WebView when it completes loading
+  // Inject PDF data to WebView when it is ready
   const injectPdfData = () => {
     if (!pdfBase64 || !webviewRef.current) return;
     const payload = JSON.stringify({ type: 'load_pdf', base64: pdfBase64 });
     webviewRef.current.postMessage(payload);
+  };
+
+  const handleMessage = (e: any) => {
+    try {
+      const data = JSON.parse(e.nativeEvent.data);
+      if (data && data.type === 'ready') {
+        injectPdfData();
+      }
+    } catch (err) {
+      console.warn('[WebView Message Error]:', err);
+    }
   };
 
   // Modern offline-ready HTML5 Canvas PDF reader powered by Mozilla's PDF.js
@@ -207,6 +218,18 @@ export default function CertificateViewerScreen() {
             loader.innerHTML = '<div style="color:#ef4444;text-align:center;padding:24px;">Failed to render preview: ' + err.message + '</div>';
           });
         });
+
+        // Notify React Native that we are ready to receive the PDF
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ready' }));
+        } else {
+          var checkInterval = setInterval(function() {
+            if (window.ReactNativeWebView) {
+              clearInterval(checkInterval);
+              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ready' }));
+            }
+          }, 50);
+        }
       </script>
     </body>
     </html>
@@ -264,7 +287,7 @@ export default function CertificateViewerScreen() {
             originWhitelist={['*']}
             source={{ html: htmlContent }}
             javaScriptEnabled={true}
-            onLoadEnd={injectPdfData}
+            onMessage={handleMessage}
             style={{ flex: 1, backgroundColor: '#0f172a' }}
             className="flex-1"
           />
