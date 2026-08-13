@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
+import { Ionicons } from '@expo/vector-icons';
 import { API_BASE_URL } from '../lib/config';
 import { Asset } from 'expo-asset';
 
@@ -192,10 +193,12 @@ export default function SplatViewer({
   if (loadError && viewMode !== 'thumbnail') {
     return (
       <View style={[styles.container, { height }, styles.centered]}>
-        <Text style={styles.errorText}>⚠ Could not load 3D view</Text>
+        <Ionicons name="alert-circle-outline" size={32} color="#fca5a5" style={{ marginBottom: 8 }} />
+        <Text style={styles.errorText}>Could not load 3D view</Text>
         <Text style={styles.errorHint}>{loadError}</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={resetToThumbnail}>
-          <Text style={styles.retryBtnText}>← Back</Text>
+        <TouchableOpacity onPress={resetToThumbnail} style={[styles.retryBtn, { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }]}>
+          <Ionicons name="arrow-back" size={14} color="#e2e8f0" />
+          <Text style={styles.retryBtnText}>Back</Text>
         </TouchableOpacity>
       </View>
     );
@@ -212,8 +215,8 @@ export default function SplatViewer({
             resizeMode="cover"
           />
         ) : (
-          <View style={[StyleSheet.absoluteFillObject, styles.placeholderBg]}>
-            <Text style={styles.placeholderIcon}>🌳</Text>
+          <View style={[StyleSheet.absoluteFillObject, styles.placeholderBg, { justifyContent: 'center', alignItems: 'center' }]}>
+            <Ionicons name="leaf-outline" size={48} color="rgba(16, 185, 129, 0.4)" />
           </View>
         )}
         <View style={styles.thumbnailOverlay} />
@@ -226,7 +229,7 @@ export default function SplatViewer({
               : 'Gaussian splat · estimasi 15–30 detik'}
           </Text>
           <TouchableOpacity
-            style={styles.load3dButton}
+            style={[styles.load3dButton, { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#10b981', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 99 }]}
             onPress={async () => {
               if (points3dUrl) {
                 enterViewMode('pointcloud');
@@ -236,7 +239,8 @@ export default function SplatViewer({
               }
             }}
           >
-            <Text style={styles.load3dButtonText}>⬡  Lihat 3D</Text>
+            <Ionicons name="cube-outline" size={16} color="#ffffff" />
+            <Text style={styles.load3dButtonText}>View 3D</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -306,8 +310,9 @@ export default function SplatViewer({
               ))}
             </View>
           )}
-          <TouchableOpacity style={styles.cancelLoadBtn} onPress={resetToThumbnail}>
-            <Text style={styles.cancelLoadText}>← Kembali</Text>
+          <TouchableOpacity style={[styles.cancelLoadBtn, { flexDirection: 'row', alignItems: 'center', gap: 4 }]} onPress={resetToThumbnail}>
+            <Ionicons name="arrow-back" size={14} color="#64748b" />
+            <Text style={styles.cancelLoadText}>Cancel</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -315,7 +320,7 @@ export default function SplatViewer({
       {/* Back button (after load) */}
       {sceneLoaded && (
         <TouchableOpacity style={styles.backBtn} onPress={resetToThumbnail}>
-          <Text style={styles.backBtnText}>✕</Text>
+          <Ionicons name="close" size={18} color="#e2e8f0" />
         </TouchableOpacity>
       )}
 
@@ -342,10 +347,11 @@ export default function SplatViewer({
       {/* Offer Gaussian upgrade after point cloud loaded */}
       {sceneLoaded && viewMode === 'pointcloud' && splatFileUrl && (
         <TouchableOpacity
-          style={styles.upgradeBadge}
+          style={[styles.upgradeBadge, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
           onPress={() => enterViewMode('gaussian')}
         >
-          <Text style={styles.upgradeBadgeText}>Load Gaussian ✦</Text>
+          <Ionicons name="sparkles-outline" size={12} color="#a3e635" />
+          <Text style={styles.upgradeBadgeText}>Load Gaussian Splat</Text>
         </TouchableOpacity>
       )}
     </View>

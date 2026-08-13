@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
 import type { ScanRecord } from '@vora/types';
 import {
   formatCO2e,
@@ -53,43 +54,10 @@ export default function ScanResultScreen() {
   const [recalibrateOpen, setRecalibrateOpen] = useState(false);
   const [claimOpen, setClaimOpen] = useState(false);
   const [scrollEnabled, setScrollEnabled] = useState(true);
-  const [isProcessingCert, setIsProcessingCert] = useState(false);
-
+ 
   const handleCertificatePress = () => {
-    if (!scan || isProcessingCert) return;
-
-    Alert.alert(
-      "Sertifikat Karbon",
-      "Pilih aksi untuk sertifikat karbon pohon ini:",
-      [
-        {
-          text: "🔍 Lihat Online",
-          onPress: () => {
-            const url = `${API_BASE_URL}/scans/${scan.tree_code}/certificate?token=${token || ''}`;
-            Linking.openURL(url).catch(() => {
-              Alert.alert("Error", "Gagal membuka URL sertifikat.");
-            });
-          }
-        },
-        {
-          text: "💾 Download & Share",
-          onPress: async () => {
-            setIsProcessingCert(true);
-            const url = `${API_BASE_URL}/scans/${scan.tree_code}/certificate`;
-            const filename = `Certificate_${scan.tree_code}.pdf`;
-            try {
-              await downloadAndShare(url, filename, 'application/pdf', token);
-            } finally {
-              setIsProcessingCert(false);
-            }
-          }
-        },
-        {
-          text: "Batal",
-          style: "cancel"
-        }
-      ]
-    );
+    if (!scan) return;
+    navigation.navigate('CertificateViewer', { treeCode: scan.tree_code });
   };
 
   const { data: history, isLoading, isError, error, refetch, isRefetching } = useQuery({
@@ -147,8 +115,9 @@ export default function ScanResultScreen() {
         {/* Hero Header */}
         <View className="bg-white border-b border-slate-200/50 px-6 pt-6 pb-8">
           <View className="flex-row items-center mb-3">
-            <View className="bg-emerald-50 border border-emerald-100 rounded-full px-3 py-1">
-              <Text className="text-[10px] font-sansBold text-emerald-800 font-bold">✓ 3D Scan Complete</Text>
+            <View className="bg-emerald-50 border border-emerald-100 rounded-full px-2.5 py-0.5 flex-row items-center gap-1">
+              <Ionicons name="checkmark-circle" size={12} color="#065f46" />
+              <Text className="text-[10px] font-sansBold text-emerald-800 font-bold">3D Scan Complete</Text>
             </View>
           </View>
           <Text className="text-3xl font-serif text-slate-900 mb-1">{scan.tree_code}</Text>
@@ -291,10 +260,9 @@ export default function ScanResultScreen() {
           {/* Actions */}
           <View className="gap-3 mt-2">
             <VoraButton
-              title="📄 Download Carbon Certificate"
+              title="View Carbon Certificate"
               variant="primary"
               onPress={handleCertificatePress}
-              isLoading={isProcessingCert}
             />
             <VoraButton
               title="Scan Another Tree"

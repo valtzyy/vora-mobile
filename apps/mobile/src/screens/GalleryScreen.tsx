@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { formatDBH, formatHeight, formatCO2eCompact, getDisplaySpecies, isScanValid } from '@vora/domain';
 import { client } from '../lib/voraClient';
 import { API_BASE_URL } from '../lib/config';
+import { Ionicons } from '@expo/vector-icons';
 import VoraButton from '../components/VoraButton';
 
 export default function GalleryScreen() {
@@ -55,8 +56,8 @@ export default function GalleryScreen() {
       <SafeAreaView className="flex-1 justify-center items-center p-6 bg-white">
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
         <View className="items-center w-full max-w-[340px]">
-          <View className="w-16 h-16 rounded-full bg-red-50 justify-center items-center mb-4 border border-red-100/50">
-            <Text className="text-2xl">⚠️</Text>
+          <View className="w-12 h-12 rounded-full bg-red-50 justify-center items-center mb-4 border border-red-100/50">
+            <Ionicons name="alert-circle-outline" size={24} color="#dc2626" />
           </View>
           <Text className="text-xl font-sansBold text-red-700 mb-2 text-center">Unable to Load Scans</Text>
           <Text className="text-sm font-sans text-slate-600 text-center leading-5 mb-4">
@@ -86,8 +87,8 @@ export default function GalleryScreen() {
       <SafeAreaView className="flex-1 justify-center items-center p-6 bg-white">
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
         <View className="items-center w-full max-w-[340px]">
-          <View className="w-20 h-20 rounded-full bg-emerald-50 justify-center items-center mb-4 border border-emerald-100/50">
-            <Text className="text-3xl">🌲</Text>
+          <View className="w-16 h-16 rounded-full bg-emerald-50 justify-center items-center mb-4 border border-emerald-100/50">
+            <Ionicons name="leaf-outline" size={28} color="#059669" />
           </View>
           <Text className="text-22 font-serif text-slate-900 mb-2 text-center">No Scans Recorded Yet</Text>
           <Text className="text-sm font-sans text-slate-500 text-center leading-relaxed mb-6">
@@ -209,7 +210,7 @@ export default function GalleryScreen() {
               {/* Species identification banner, styled nicely at the bottom if available */}
               {species.isIdentified && (
                 <View className="bg-emerald-50 border-t border-emerald-100/50 flex-row items-center p-2.5 rounded-b-xl -mx-2 -mb-2 mt-1">
-                  <Text className="mr-1.5 text-xs">🌿</Text>
+                  <Ionicons name="leaf-outline" size={14} color="#065f46" style={{ marginRight: 6 }} />
                   <Text className="text-xs font-sansMedium text-emerald-800 flex-1" numberOfLines={1}>
                     {species.displayName}
                   </Text>
