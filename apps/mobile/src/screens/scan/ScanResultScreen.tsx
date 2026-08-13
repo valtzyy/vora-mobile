@@ -5,7 +5,6 @@ import {
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
-  StyleSheet,
   StatusBar,
   RefreshControl,
   Image,
@@ -35,18 +34,13 @@ import { client } from '../../lib/voraClient';
 import { useAuth } from '../../lib/AuthContext';
 import { API_BASE_URL } from '../../lib/config';
 import { downloadAndShare } from '../../lib/fileShare';
-import SplatViewer from '../../components/SplatViewer';
+import SplatViewer, { derivePoints3dUrl } from '../../components/SplatViewer';
 import RecalibrateModal from '../../components/RecalibrateModal';
 import ClaimToPlotModal from '../../components/plots/ClaimToPlotModal';
+import VoraButton from '../../components/VoraButton';
 
 type Nav = NativeStackNavigationProp<ScanStackParamList, 'ScanResult'>;
 type Route = RouteProp<ScanStackParamList, 'ScanResult'>;
-
-const COLOR_MAP: Record<'green' | 'amber' | 'red', { bg: string; text: string }> = {
-  green: { bg: '#f0fdf4', text: '#166534' },
-  amber: { bg: '#fffbeb', text: '#92400e' },
-  red: { bg: '#fef2f2', text: '#991b1b' },
-};
 
 export default function ScanResultScreen() {
   const navigation = useNavigation<Nav>();
@@ -75,25 +69,23 @@ export default function ScanResultScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
+      <SafeAreaView className="flex-1 justify-center items-center p-6 bg-white">
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-        <ActivityIndicator size="large" color="#16a34a" />
-        <Text style={styles.loadingTitle}>Loading Scan Result...</Text>
+        <ActivityIndicator size="large" color="#10b981" />
+        <Text className="mt-4 text-sm font-sansBold text-slate-700 font-bold">Loading Scan Result...</Text>
       </SafeAreaView>
     );
   }
 
   if (isError || !scan) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
+      <SafeAreaView className="flex-1 justify-center items-center p-6 bg-white">
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-        <Text style={styles.errorTitle}>Could Not Load Result</Text>
-        <Text style={styles.errorSubtitle}>
+        <Text className="text-xl font-sansBold text-red-650 mb-2 font-bold">Could Not Load Result</Text>
+        <Text className="text-sm font-sans text-slate-500 text-center mb-6 px-4">
           {(error as Error)?.message || `No scan data found for ${treeCode}.`}
         </Text>
-        <TouchableOpacity style={styles.primaryButton} onPress={() => refetch()} activeOpacity={0.8}>
-          <Text style={styles.primaryButtonText}>Retry</Text>
-        </TouchableOpacity>
+        <VoraButton title="Retry" onPress={() => refetch()} variant="primary" className="w-full max-w-[200px]" />
       </SafeAreaView>
     );
   }
@@ -109,66 +101,71 @@ export default function ScanResultScreen() {
   ].filter(Boolean) as string[];
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#16a34a" />
+    <SafeAreaView className="flex-1 bg-white">
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.contentContainer}
+        className="flex-1 bg-slate-50/60"
+        contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#ffffff" />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#10b981" colors={['#10b981']} />}
       >
-        {/* Hero */}
-        <View style={styles.heroHeader}>
-          <View style={styles.statusPill}>
-            <Text style={styles.statusPillText}>✓ 3D Scan Complete</Text>
+        {/* Hero Header */}
+        <View className="bg-white border-b border-slate-200/50 px-6 pt-6 pb-8">
+          <View className="flex-row items-center mb-3">
+            <View className="bg-emerald-50 border border-emerald-100 rounded-full px-3 py-1">
+              <Text className="text-[10px] font-sansBold text-emerald-800 font-bold">✓ 3D Scan Complete</Text>
+            </View>
           </View>
-          <Text style={styles.heroTitle}>{scan.tree_code}</Text>
-          <Text style={styles.heroDate}>
+          <Text className="text-3xl font-serif text-slate-900 mb-1">{scan.tree_code}</Text>
+          <Text className="text-xs text-slate-500 font-sans">
             {new Date(scan.scan_date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
           </Text>
         </View>
 
-        <View style={styles.body}>
+        <View className="px-5 pt-4">
           {scan.splat_file_url ? (
-            <View style={styles.splatWrap}>
+            <View className="mt-2 mb-5 rounded-2xl overflow-hidden border border-slate-200">
               <SplatViewer
                 treeCode={scan.tree_code}
                 splatFileUrl={scan.splat_file_url}
+                points3dUrl={scan.points3d_url || derivePoints3dUrl(scan.splat_file_url)}
+                thumbnailUrl={scan.thumbnail_url}
                 token={token}
                 onMetricsUpdated={() => refetch()}
               />
             </View>
           ) : (
             scan.thumbnail_url && (
-              <Image source={{ uri: scan.thumbnail_url }} style={styles.heroImage} resizeMode="cover" />
+              <Image source={{ uri: scan.thumbnail_url }} className="w-full h-52 rounded-2xl mb-5 bg-slate-200 border border-slate-200 shadow-sm" resizeMode="cover" />
             )
           )}
 
-          {/* Carbon headline + uncertainty range */}
-          <View style={[styles.carbonCard, !scan.thumbnail_url && styles.carbonCardOverlap]}>
-            <Text style={styles.carbonLabel}>Estimated Carbon Stored</Text>
-            <Text style={styles.carbonValue}>{formatCO2e(scan.co2e_kg)}</Text>
-            <Text style={styles.carbonRange}>
+
+          {/* Carbon card */}
+          <View className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm mb-4">
+            <Text className="text-[10px] font-sansBold text-slate-400 uppercase tracking-widest mb-1.5 font-bold">Estimated Carbon Stored</Text>
+            <Text className="text-4xl font-serif text-vora-dark mb-1">{formatCO2e(scan.co2e_kg)}</Text>
+            <Text className="text-xs font-sansMedium text-slate-500">
               {formatCO2eRange(scan.co2e_low_kg, scan.co2e_high_kg, scan.co2e_uncertainty_pct)}
             </Text>
           </View>
 
           {/* Status badges */}
-          <View style={styles.badgeRow}>
+          <View className="flex-row gap-2 mb-4 flex-wrap">
             <StatusBadge label={scaleInfo.shortLabel} color={scaleInfo.color} />
             <StatusBadge label={qualityInfo.label} color={qualityInfo.color} />
           </View>
 
-          {/* Mandatory disclaimer */}
+          {/* Height used disclaimer if needed */}
           {heightInfo.showDisclaimer && heightInfo.disclaimer && (
-            <View style={styles.disclaimerBox}>
-              <Text style={styles.disclaimerText}>{heightInfo.disclaimer}</Text>
+            <View className="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-5">
+              <Text className="text-xs font-sans text-amber-850 leading-relaxed">{heightInfo.disclaimer}</Text>
             </View>
           )}
 
           {/* Metrics grid */}
-          <Text style={styles.sectionHeading}>Tree Allometrics</Text>
-          <View style={styles.metricsGrid}>
+          <Text className="text-lg font-serif text-slate-900 mb-3 mt-2">Tree Allometrics</Text>
+          <View className="flex-row flex-wrap gap-3 mb-5">
             <MetricBox label="DBH (Trunk Diameter)" value={formatDBH(scan.dbh_cm)} />
             <MetricBox label={`Height (${heightInfo.label})`} value={formatHeight(scan.tinggi_m)} />
             <MetricBox label="Above-Ground Biomass" value={formatBiomass(scan.agb_kg)} />
@@ -176,19 +173,21 @@ export default function ScanResultScreen() {
           </View>
 
           {/* Species */}
-          <View style={styles.speciesCard}>
-            <View style={styles.speciesHeader}>
-              <Text style={styles.speciesTag}>🌿 Species Identification</Text>
+          <View className="bg-emerald-50 border border-emerald-100/60 rounded-2xl p-4 mb-5">
+            <View className="flex-row justify-between items-center mb-1.5">
+              <Text className="text-[10px] font-sansBold text-emerald-800 uppercase tracking-wider font-bold">🌿 Species Identification</Text>
               {species.confidence != null && (
-                <Text style={styles.confidenceText}>{formatConfidence(species.confidence)} match</Text>
+                <View className="bg-emerald-100/80 px-2 py-0.5 rounded">
+                  <Text className="text-[10px] font-sansBold text-emerald-850 font-bold">{formatConfidence(species.confidence)} match</Text>
+                </View>
               )}
             </View>
-            <Text style={styles.speciesName}>{species.displayName}</Text>
+            <Text className="text-base font-sansBold text-emerald-950 font-bold">{species.displayName}</Text>
           </View>
 
           {/* How calculated */}
-          <View style={styles.calcCard}>
-            <Text style={styles.calcTitle}>How This Was Calculated</Text>
+          <View className="bg-white border border-slate-200 rounded-2xl p-4 mb-5">
+            <Text className="text-xs font-sansBold text-slate-900 mb-3 uppercase tracking-wide font-bold">How This Was Calculated</Text>
             <CalcRow label="Wood density" value={`${formatWoodDensity(scan.wood_density_used)} (${scan.wood_density_source || 'n/a'})`} />
             <CalcRow label="Climate zone" value={scan.climate_zone_detected || 'Unknown'} />
             <CalcRow label="Formula used" value={scan.formula_used || 'n/a'} />
@@ -196,75 +195,80 @@ export default function ScanResultScreen() {
             {hasScanGPS(scan) && <CalcRow label="GPS" value={formatGPS(scan.gps_lat, scan.gps_lon)} />}
           </View>
 
-          {/* Manual 2D recalibration */}
+          {/* Recalibrate */}
           {scan.thumbnail_url && (
-            <TouchableOpacity
-              style={styles.recalibrateButton}
-              activeOpacity={0.8}
+            <VoraButton
+              title="Recalibrate Trunk (2D Photo)"
+              variant="secondary"
               onPress={() => setRecalibrateOpen(true)}
-            >
-              <Text style={styles.recalibrateButtonText}>Recalibrate Trunk (2D Photo)</Text>
-            </TouchableOpacity>
+              className="mb-4"
+            />
           )}
 
-          {/* Warnings panel */}
+          {/* Warnings */}
           {warnings.length > 0 && (
-            <View style={styles.warningsBox}>
-              <Text style={styles.warningsTitle}>⚠ Things to Know About This Estimate</Text>
+            <View className="bg-red-50 border border-red-100 rounded-2xl p-4 mb-5">
+              <Text className="text-xs font-sansBold text-red-800 mb-2 font-bold">⚠️ Things to Know About This Estimate</Text>
               {warnings.map((w, i) => (
-                <Text key={i} style={styles.warningsItem}>• {w}</Text>
+                <React.Fragment key={i}>
+                  <Text className="text-[11px] font-sans text-red-650 mb-1 leading-relaxed">
+                    • {w}
+                  </Text>
+                </React.Fragment>
               ))}
             </View>
           )}
 
-          {/* Scan history timeline */}
+          {/* Scan History */}
           {scans.length > 1 && (
-            <View style={styles.historyBox}>
-              <Text style={styles.calcTitle}>Scan History</Text>
-              {scans.map((s) => (
-                <TouchableOpacity
-                  key={s.id}
-                  style={[styles.historyRow, s.id === scan.id && styles.historyRowActive]}
-                  onPress={() => setSelectedScanId(s.id)}
-                >
-                  <Text style={styles.historyDate}>
-                    {new Date(s.scan_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </Text>
-                  <Text style={styles.historyCo2e}>{formatCO2e(s.co2e_kg, 0)}</Text>
-                </TouchableOpacity>
-              ))}
+            <View className="bg-white border border-slate-200 rounded-2xl p-4 mb-5">
+              <Text className="text-xs font-sansBold text-slate-900 mb-3 uppercase tracking-wide font-bold">Scan History</Text>
+              <View className="gap-2">
+                {scans.map((s) => (
+                  <TouchableOpacity
+                    key={s.id}
+                    className={`flex-row justify-between items-center p-2 rounded-lg ${s.id === scan.id ? 'bg-slate-100' : ''}`}
+                    onPress={() => setSelectedScanId(s.id)}
+                  >
+                    <Text className="text-xs font-sans text-slate-600">
+                      {new Date(s.scan_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </Text>
+                    <Text className={`text-xs font-sansBold font-bold ${s.id === scan.id ? 'text-[#191919]' : 'text-slate-400'}`}>
+                      {formatCO2e(s.co2e_kg, 0)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           )}
 
           {/* Claim to plot */}
           {user && !scan.claimed_by_user_id && (
-            <TouchableOpacity style={styles.claimButton} activeOpacity={0.8} onPress={() => setClaimOpen(true)}>
-              <Text style={styles.claimButtonText}>Claim to a Plot</Text>
-            </TouchableOpacity>
+            <VoraButton
+              title="Claim to a Plot"
+              variant="outline"
+              onPress={() => setClaimOpen(true)}
+              className="mb-5"
+            />
           )}
 
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={styles.certificateButton}
-              activeOpacity={0.8}
+          {/* Actions */}
+          <View className="gap-3 mt-2">
+            <VoraButton
+              title="📄 Download Carbon Certificate"
+              variant="primary"
               onPress={handleCertificatePress}
-            >
-              <Text style={styles.certificateButtonText}>📄 Download Carbon Certificate</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.primaryButton}
-              activeOpacity={0.8}
+            />
+            <VoraButton
+              title="Scan Another Tree"
+              variant="secondary"
               onPress={() => navigation.navigate('ScanCapture')}
-            >
-              <Text style={styles.primaryButtonText}>Scan Another Tree</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              activeOpacity={0.8}
+            />
+            <VoraButton
+              title="View All in Gallery"
+              variant="outline"
               onPress={() => navigation.getParent()?.navigate('Gallery')}
-            >
-              <Text style={styles.secondaryButtonText}>View All in Gallery</Text>
-            </TouchableOpacity>
+            />
           </View>
         </View>
       </ScrollView>
@@ -289,203 +293,29 @@ export default function ScanResultScreen() {
 }
 
 function StatusBadge({ label, color }: { label: string; color: 'green' | 'amber' | 'red' }) {
-  const c = COLOR_MAP[color];
+  const bgClass = color === 'green' ? 'bg-emerald-50 text-emerald-800 border border-emerald-100' : color === 'amber' ? 'bg-amber-50 text-amber-800 border border-amber-100' : 'bg-red-50 text-red-800 border border-red-100';
+  const textClass = color === 'green' ? 'text-emerald-800' : color === 'amber' ? 'text-amber-800' : 'text-red-800';
   return (
-    <View style={[styles.badge, { backgroundColor: c.bg }]}>
-      <Text style={[styles.badgeText, { color: c.text }]}>{label}</Text>
+    <View className={`px-2.5 py-1 rounded-lg ${bgClass}`}>
+      <Text className={`text-[11px] font-sansBold font-bold ${textClass}`}>{label}</Text>
     </View>
   );
 }
 
 function MetricBox({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.metricBox}>
-      <Text style={styles.metricLabel}>{label}</Text>
-      <Text style={styles.metricValue}>{value}</Text>
+    <View className="flex-1 min-w-[45%] bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
+      <Text className="text-[10px] font-sansBold text-slate-400 uppercase tracking-wider mb-1 font-bold">{label}</Text>
+      <Text className="text-lg font-sansBold text-slate-800 font-bold">{value}</Text>
     </View>
   );
 }
 
 function CalcRow({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.calcRow}>
-      <Text style={styles.calcLabel}>{label}</Text>
-      <Text style={styles.calcValue}>{value}</Text>
+    <View className="flex-row justify-between py-1.5 border-b border-slate-100/50 last:border-b-0">
+      <Text className="text-xs font-sans text-slate-500">{label}</Text>
+      <Text className="text-xs font-sansBold text-slate-800 flex-shrink text-right pl-3 font-bold">{value}</Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#16a34a' },
-  container: { flex: 1, backgroundColor: '#f9fafb' },
-  contentContainer: { paddingBottom: 40 },
-  heroHeader: { backgroundColor: '#16a34a', paddingHorizontal: 24, paddingTop: 24, paddingBottom: 36 },
-  statusPill: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-    marginBottom: 12,
-  },
-  statusPillText: { color: '#ffffff', fontSize: 12, fontWeight: '700' },
-  heroTitle: { fontSize: 28, fontWeight: 'bold', color: '#ffffff', fontFamily: 'monospace' },
-  heroDate: { fontSize: 14, color: '#dcfce7', marginTop: 4 },
-  body: { paddingHorizontal: 20, paddingTop: 16 },
-  splatWrap: { marginTop: -20, marginBottom: 20 },
-  heroImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 16,
-    marginBottom: 20,
-    marginTop: -20,
-    backgroundColor: '#e5e7eb',
-    borderWidth: 2,
-    borderColor: '#ffffff',
-  },
-  carbonCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#bbf7d0',
-    marginBottom: 16,
-  },
-  carbonCardOverlap: { marginTop: -8 },
-  carbonLabel: { fontSize: 13, color: '#15803d', fontWeight: '700', textTransform: 'uppercase', marginBottom: 6 },
-  carbonValue: { fontSize: 34, fontWeight: '900', color: '#16a34a' },
-  carbonRange: { fontSize: 13, color: '#6b7280', marginTop: 4 },
-  badgeRow: { flexDirection: 'row', gap: 8, marginBottom: 16, flexWrap: 'wrap' },
-  badge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
-  badgeText: { fontSize: 12, fontWeight: '700' },
-  disclaimerBox: {
-    backgroundColor: '#fffbeb',
-    borderWidth: 1,
-    borderColor: '#fde68a',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 20,
-  },
-  disclaimerText: { fontSize: 13, color: '#92400e', lineHeight: 18 },
-  sectionHeading: { fontSize: 18, fontWeight: 'bold', color: '#111827', marginBottom: 14 },
-  metricsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 },
-  metricBox: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  metricLabel: { fontSize: 12, color: '#6b7280', fontWeight: '600', marginBottom: 6 },
-  metricValue: { fontSize: 20, fontWeight: 'bold', color: '#1f2937' },
-  speciesCard: {
-    backgroundColor: '#eff6ff',
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-    marginBottom: 20,
-  },
-  speciesHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  speciesTag: { fontSize: 12, fontWeight: '700', color: '#1d4ed8', textTransform: 'uppercase' },
-  confidenceText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#2563eb',
-    backgroundColor: '#dbeafe',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  speciesName: { fontSize: 16, fontWeight: 'bold', color: '#1e3a8a' },
-  calcCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    marginBottom: 20,
-  },
-  calcTitle: { fontSize: 14, fontWeight: 'bold', color: '#111827', marginBottom: 10 },
-  calcRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
-  calcLabel: { fontSize: 13, color: '#6b7280' },
-  calcValue: { fontSize: 13, color: '#111827', fontWeight: '600', flexShrink: 1, textAlign: 'right' },
-  warningsBox: {
-    backgroundColor: '#fef2f2',
-    borderWidth: 1,
-    borderColor: '#fecaca',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 20,
-  },
-  warningsTitle: { fontSize: 13, fontWeight: '700', color: '#991b1b', marginBottom: 6 },
-  warningsItem: { fontSize: 12, color: '#b91c1c', lineHeight: 18 },
-  historyBox: {
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    marginBottom: 20,
-  },
-  historyRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-  },
-  historyRowActive: { backgroundColor: '#f0fdf4' },
-  historyDate: { fontSize: 13, color: '#6b7280' },
-  historyCo2e: { fontSize: 13, fontWeight: '700', color: '#16a34a' },
-  claimButton: {
-    backgroundColor: '#f3f4f6',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  claimButtonText: { color: '#6b7280', fontSize: 14, fontWeight: '600' },
-  recalibrateButton: {
-    backgroundColor: '#eff6ff',
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  recalibrateButtonText: { color: '#1d4ed8', fontSize: 13, fontWeight: '600' },
-  actions: { gap: 12 },
-  certificateButton: {
-    backgroundColor: '#191919',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  certificateButtonText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
-  primaryButton: {
-    backgroundColor: '#16a34a',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primaryButtonText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
-  secondaryButton: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  secondaryButtonText: { color: '#374151', fontSize: 15, fontWeight: '600' },
-  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#ffffff' },
-  loadingTitle: { marginTop: 16, fontSize: 16, fontWeight: '600', color: '#374151' },
-  errorTitle: { fontSize: 20, fontWeight: 'bold', color: '#dc2626', marginBottom: 8, textAlign: 'center' },
-  errorSubtitle: { fontSize: 14, color: '#4b5563', textAlign: 'center', marginBottom: 20, lineHeight: 20 },
-});

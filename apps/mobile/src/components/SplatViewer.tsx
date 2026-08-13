@@ -1,122 +1,314 @@
-import React, { useRef, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useRef, useState, useCallback, useMemo } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Image,
+  Platform,
+} from 'react-native';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { API_BASE_URL } from '../lib/config';
+import { Asset } from 'expo-asset';
 
 interface SplatViewerProps {
   treeCode: string;
+  /**
+   * URL to the Gaussian Splat file (.ksplat or .ply) in Cloudflare R2.
+   * Used to derive the points3d.ply URL for the lightweight point cloud viewer.
+   */
   splatFileUrl: string;
-  /** Bearer token, if logged in — forwarded so the viewer's own internal
-   * adjust-geometry fetch (see vora/viewer.html) can authenticate once the
-   * backend requires it. Safe to omit; web keeps using its cookie session. */
+  /** Optional pre-resolved URL to the decimated point cloud (points3d.ply). */
+  points3dUrl?: string | null;
+  /** Optional static thumbnail shown before the user opts-in to load 3D. */
+  thumbnailUrl?: string | null;
+  /** Bearer token forwarded to the gaussian viewer for authenticated geometry-edit saves. */
   token?: string | null;
-  /** Fired when the viewer reports the manual 3D edit was saved, so the
-   * caller can refetch scan metrics. */
+  /** Fired when the gaussian viewer reports the manual 3D edit was saved. */
   onMetricsUpdated?: () => void;
   height?: number;
 }
 
+interface TimingReport {
+  phase: string;
+  ms: number;
+}
+
 /**
- * Embeds the backend's existing web-based Gaussian Splat viewer
- * (vora/viewer.html) inside a WebView — same URL contract as the web app's
- * <iframe>. Communication uses a postMessage bridge: viewer.html mirrors its
- * window.parent.postMessage(...) calls to window.ReactNativeWebView.postMessage(...)
- * when running inside a WebView (see the `postToParent` helper added there),
- * and this component uses injectJavaScript to dispatch messages back in
- * (window.postMessage inside the page's own context — the page's existing
- * `message` event listener handles that identically to a real cross-frame
- * postMessage).
+ * Derives the points3d.ply URL from a splat_file_url by replacing the
+ * filename portion.
+ *
+ * Pattern:
+ *   .../tree_scans/{tree_code}/{timestamp}_result.ksplat  →  {timestamp}_points3d.ply
+ *   .../tree_scans/{tree_code}/{timestamp}_result.ply     →  {timestamp}_points3d.ply
+ */
+export function derivePoints3dUrl(splatFileUrl: string): string | null {
+  if (!splatFileUrl) return null;
+  try {
+    const lastSlash = splatFileUrl.lastIndexOf('/');
+    const baseDir   = splatFileUrl.substring(0, lastSlash + 1);
+    const filename  = splatFileUrl.substring(lastSlash + 1).split('?')[0];
+    const underscoreIdx = filename.indexOf('_');
+    const tsPart = underscoreIdx > 0 ? filename.substring(0, underscoreIdx + 1) : '';
+    return `${baseDir}${tsPart}points3d.ply`;
+  } catch {
+    return null;
+  }
+}
+
+type ViewMode = 'thumbnail' | 'pointcloud' | 'gaussian';
+
+/**
+ * SplatViewer — mobile-optimised 3D viewer for Vora tree scans.
+ *
+ * UX flow:
+ *   1. Default: thumbnail photo (< 100ms, zero GPU cost).
+ *   2. "Lihat 3D" tap → lightweight PLY point cloud viewer (Three.js inlined,
+ *      no CDN, estimated 1–3s on device).
+ *   3. "Load Gaussian ✦" badge → full gaussian-splats-3d viewer (slow, opt-in).
  */
 export default function SplatViewer({
   treeCode,
   splatFileUrl,
+  points3dUrl: points3dUrlProp,
+  thumbnailUrl,
   token,
   onMetricsUpdated,
   height = 320,
 }: SplatViewerProps) {
   const webviewRef = useRef<WebView>(null);
+  const [viewMode, setViewMode]       = useState<ViewMode>('thumbnail');
   const [sceneLoaded, setSceneLoaded] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [editMode, setEditMode]       = useState(false);
+  const [loadError, setLoadError]     = useState<string | null>(null);
+  const [timing, setTiming]           = useState<TimingReport[]>([]);
+  const [webviewCrashed, setWebviewCrashed] = useState(false);
+  const [pcHtmlUri, setPcHtmlUri]     = useState<string | null>(null);
 
-  const params = new URLSearchParams({
-    v: '11',
+  // Resolve points3d URL (prop → derivation → null)
+  const points3dUrl = points3dUrlProp || derivePoints3dUrl(splatFileUrl);
+
+  // ── Load Point Cloud Asset ──────────────────────────────────────────────
+  const loadPcAsset = useCallback(async () => {
+    try {
+      const asset = Asset.fromModule(require('../../assets/point-cloud-viewer.html'));
+      await asset.downloadAsync();
+      const baseUri = asset.localUri || asset.uri;
+      const finalUri = `${baseUri}?plyUrl=${encodeURIComponent(points3dUrl || '')}&code=${encodeURIComponent(treeCode)}`;
+      setPcHtmlUri(finalUri);
+    } catch (err) {
+      setLoadError(`Failed to load point cloud asset: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }, [points3dUrl, treeCode]);
+
+  // ── Gaussian viewer URL ──────────────────────────────────────────────────
+  const gaussianParams = new URLSearchParams({
+    v: '12',
     code: treeCode,
     url: splatFileUrl,
-    proxy: 'false', // load directly from custom R2 domain (files.azzaky.web.id)
+    proxy: 'false',
   });
-  if (token) params.set('token', token);
-  const viewerUrl = `${API_BASE_URL}/viewer.html?${params.toString()}`;
+  if (token) gaussianParams.set('token', token);
+  const gaussianUrl = `${API_BASE_URL}/viewer.html?${gaussianParams.toString()}`;
 
-  const sendToViewer = useCallback((data: unknown) => {
-    webviewRef.current?.injectJavaScript(`window.postMessage(${JSON.stringify(data)}, '*'); true;`);
-  }, []);
-
+  // ── Message handler ──────────────────────────────────────────────────────
   const handleMessage = useCallback(
     (event: WebViewMessageEvent) => {
       const raw = event.nativeEvent.data;
+
       if (raw === 'vora_scene_loaded') {
         setSceneLoaded(true);
         return;
       }
+
       try {
         const parsed = JSON.parse(raw);
+
+        if (parsed?.type === 'vora_timing') {
+          const report: TimingReport = { phase: parsed.phase, ms: parsed.ms };
+          setTiming(prev => {
+            const next = [...prev, report];
+            const phases = next.map(r => r.phase);
+            if (phases.includes('first_frame_render')) {
+              const net   = next.find(r => r.phase === 'splat_network_fetch')?.ms ?? 0;
+              const parse = next.find(r => r.phase === 'lib_init')?.ms ?? 0;
+              const frame = next.find(r => r.phase === 'first_frame_render')?.ms ?? 0;
+              console.log(
+                `[SplatViewer:${viewMode}] network=${net}ms parse=${parse}ms frame=${frame}ms total=${net+parse+frame}ms`,
+              );
+            }
+            return next;
+          });
+          return;
+        }
+
+        if (parsed?.type === 'vora_point_cloud_error') {
+          setLoadError(`Point cloud: ${parsed.message}`);
+          return;
+        }
+
         if (parsed?.type === 'vora_metrics_updated') {
           setEditMode(false);
           onMetricsUpdated?.();
         }
       } catch {
-        // Not JSON and not the known bare string — ignore.
+        // ignore non-JSON
       }
     },
-    [onMetricsUpdated]
+    [onMetricsUpdated, viewMode],
   );
 
-  const startEdit = () => {
-    setEditMode(true);
-    sendToViewer({ type: 'start_3d_edit' });
-  };
-  const saveEdit = () => sendToViewer({ type: 'save_3d_edit' });
-  const cancelEdit = () => {
+  const sendToViewer = useCallback((data: unknown) => {
+    webviewRef.current?.injectJavaScript(
+      `window.postMessage(${JSON.stringify(data)}, '*'); true;`,
+    );
+  }, []);
+
+  const startEdit  = () => { setEditMode(true);  sendToViewer({ type: 'start_3d_edit' }); };
+  const saveEdit   = () =>   sendToViewer({ type: 'save_3d_edit' });
+  const cancelEdit = () => { setEditMode(false); sendToViewer({ type: 'cancel_3d_edit' }); };
+
+  const resetToThumbnail = () => {
+    setViewMode('thumbnail');
+    setSceneLoaded(false);
+    setLoadError(null);
+    setTiming([]);
+    setWebviewCrashed(false);
     setEditMode(false);
-    sendToViewer({ type: 'cancel_3d_edit' });
   };
 
-  if (loadError) {
+  const enterViewMode = (mode: ViewMode) => {
+    setSceneLoaded(false);
+    setLoadError(null);
+    setTiming([]);
+    setWebviewCrashed(false);
+    setViewMode(mode);
+  };
+
+  // ── Error state ──────────────────────────────────────────────────────────
+  if (loadError && viewMode !== 'thumbnail') {
     return (
       <View style={[styles.container, { height }, styles.centered]}>
-        <Text style={styles.errorText}>Could not load 3D viewer.</Text>
+        <Text style={styles.errorText}>⚠ Could not load 3D view</Text>
         <Text style={styles.errorHint}>{loadError}</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={resetToThumbnail}>
+          <Text style={styles.retryBtnText}>← Back</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
+  // ── Thumbnail (default) state ────────────────────────────────────────────
+  if (viewMode === 'thumbnail') {
+    return (
+      <View style={[styles.container, { height }]}>
+        {thumbnailUrl ? (
+          <Image
+            source={{ uri: thumbnailUrl }}
+            style={StyleSheet.absoluteFillObject}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[StyleSheet.absoluteFillObject, styles.placeholderBg]}>
+            <Text style={styles.placeholderIcon}>🌳</Text>
+          </View>
+        )}
+        <View style={styles.thumbnailOverlay} />
+
+        <View style={styles.loadPromptContent}>
+          <Text style={styles.loadPromptTitle}>Model 3D Pohon</Text>
+          <Text style={styles.loadPromptSub}>
+            {points3dUrl
+              ? 'Point cloud · estimasi < 3 detik'
+              : 'Gaussian splat · estimasi 15–30 detik'}
+          </Text>
+          <TouchableOpacity
+            style={styles.load3dButton}
+            onPress={async () => {
+              if (points3dUrl) {
+                enterViewMode('pointcloud');
+                await loadPcAsset();
+              } else {
+                enterViewMode('gaussian');
+              }
+            }}
+          >
+            <Text style={styles.load3dButtonText}>⬡  Lihat 3D</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // ── WebView (point cloud or gaussian) ───────────────────────────────────
+  const webviewSource =
+    viewMode === 'pointcloud' && pcHtmlUri
+      ? { uri: pcHtmlUri }
+      : { uri: gaussianUrl };
+
   return (
     <View style={[styles.container, { height }]}>
-      <WebView
-        ref={webviewRef}
-        source={{ uri: viewerUrl }}
-        style={styles.webview}
-        onMessage={handleMessage}
-        onError={(e) => setLoadError(e.nativeEvent.description || 'Unknown WebView error')}
-        onHttpError={(e) => setLoadError(`HTTP ${e.nativeEvent.statusCode}`)}
-        javaScriptEnabled
-        domStorageEnabled
-        allowsInlineMediaPlayback
-        originWhitelist={['*']}
-      />
+      {webviewCrashed ? (
+        <View style={[StyleSheet.absoluteFillObject, styles.centered, { backgroundColor: '#111827' }]}>
+          <Text style={styles.errorText}>WebView crashed</Text>
+          <Text style={styles.errorHint}>Device may be low on memory.</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={resetToThumbnail}>
+            <Text style={styles.retryBtnText}>← Back</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <WebView
+          ref={webviewRef}
+          source={webviewSource}
+          style={styles.webview}
+          onMessage={handleMessage}
+          onError={e => setLoadError(e.nativeEvent.description || 'Unknown WebView error')}
+          onHttpError={e => setLoadError(`HTTP ${e.nativeEvent.statusCode}`)}
+          // Option C: WebView config tuning
+          javaScriptEnabled
+          domStorageEnabled
+          allowsInlineMediaPlayback
+          originWhitelist={['*']}
+          cacheEnabled={true}
+          androidLayerType={Platform.OS === 'android' ? 'hardware' : undefined}
+          mixedContentMode="always"
+          // Option 6: WebView crash detection
+          onRenderProcessGone={() => setWebviewCrashed(true)}
+        />
+      )}
 
-      {!sceneLoaded && (
+      {/* Loading overlay */}
+      {!sceneLoaded && !webviewCrashed && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#16a34a" />
-          <Text style={styles.loadingText}>Loading 3D splat...</Text>
-          <Text style={styles.loadingHint}>
-            First load can take a while if the server was idle (cold start).
+          <ActivityIndicator size="large" color="#10b981" />
+          <Text style={styles.loadingText}>
+            {viewMode === 'pointcloud' ? 'Loading point cloud…' : 'Loading 3D splat…'}
           </Text>
+          {timing.length > 0 && (
+            <View style={styles.timingBox}>
+              {timing.map(r => (
+                <Text key={r.phase} style={styles.timingRow}>
+                  {r.phase}: {r.ms}ms
+                </Text>
+              ))}
+            </View>
+          )}
+          <TouchableOpacity style={styles.cancelLoadBtn} onPress={resetToThumbnail}>
+            <Text style={styles.cancelLoadText}>← Kembali</Text>
+          </TouchableOpacity>
         </View>
       )}
 
+      {/* Back button (after load) */}
       {sceneLoaded && (
+        <TouchableOpacity style={styles.backBtn} onPress={resetToThumbnail}>
+          <Text style={styles.backBtnText}>✕</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Gaussian edit controls (only in gaussian mode after load) */}
+      {sceneLoaded && viewMode === 'gaussian' && (
         <View style={styles.controlsBar}>
           {!editMode ? (
             <TouchableOpacity style={styles.controlButton} onPress={startEdit}>
@@ -134,38 +326,81 @@ export default function SplatViewer({
           )}
         </View>
       )}
+
+      {/* Offer Gaussian upgrade after point cloud loaded */}
+      {sceneLoaded && viewMode === 'pointcloud' && splatFileUrl && (
+        <TouchableOpacity
+          style={styles.upgradeBadge}
+          onPress={() => enterViewMode('gaussian')}
+        >
+          <Text style={styles.upgradeBadgeText}>Load Gaussian ✦</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#111827',
-  },
-  webview: { flex: 1, backgroundColor: '#111827' },
-  centered: { justifyContent: 'center', alignItems: 'center', padding: 20 },
-  errorText: { color: '#fca5a5', fontSize: 14, fontWeight: '600', marginBottom: 4 },
-  errorHint: { color: '#9ca3af', fontSize: 12, textAlign: 'center' },
+  container: { width: '100%', borderRadius: 12, overflow: 'hidden', backgroundColor: '#111827' },
+  webview:   { flex: 1, backgroundColor: '#0f1923' },
+  centered:  { justifyContent: 'center', alignItems: 'center', padding: 20 },
+
+  errorText:    { color: '#fca5a5', fontSize: 14, fontWeight: '600', marginBottom: 4 },
+  errorHint:    { color: '#9ca3af', fontSize: 12, textAlign: 'center', marginBottom: 12 },
+  retryBtn:     { backgroundColor: '#1e293b', paddingHorizontal: 18, paddingVertical: 8, borderRadius: 8 },
+  retryBtnText: { color: '#e2e8f0', fontSize: 12, fontWeight: '700' },
+
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#111827',
+    justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f1923',
   },
-  loadingText: { color: '#e5e7eb', fontSize: 13, fontWeight: '600', marginTop: 12 },
-  loadingHint: { color: '#9ca3af', fontSize: 11, marginTop: 4, textAlign: 'center', paddingHorizontal: 24 },
-  controlsBar: { position: 'absolute', bottom: 12, right: 12 },
+  loadingText:  { color: '#e5e7eb', fontSize: 13, fontWeight: '600', marginTop: 12 },
+  timingBox: {
+    marginTop: 14, backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, minWidth: 220,
+  },
+  timingRow:       { color: '#6ee7b7', fontSize: 10, fontFamily: 'monospace', lineHeight: 16 },
+  cancelLoadBtn:   { marginTop: 20, paddingHorizontal: 16, paddingVertical: 8 },
+  cancelLoadText:  { color: '#64748b', fontSize: 12 },
+
+  controlsBar:    { position: 'absolute', bottom: 12, right: 12 },
   editButtonsRow: { flexDirection: 'row', gap: 8 },
-  controlButton: {
+  controlButton:  {
     backgroundColor: 'rgba(17,24,39,0.85)',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8,
   },
-  saveButton: { backgroundColor: '#16a34a' },
-  cancelButton: { backgroundColor: 'rgba(220,38,38,0.85)' },
+  saveButton:        { backgroundColor: '#16a34a' },
+  cancelButton:      { backgroundColor: 'rgba(220,38,38,0.85)' },
   controlButtonText: { color: '#ffffff', fontSize: 12, fontWeight: '700' },
+
+  backBtn: {
+    position: 'absolute', top: 10, right: 10,
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  backBtnText: { color: '#e2e8f0', fontSize: 13, fontWeight: '700' },
+
+  upgradeBadge: {
+    position: 'absolute', bottom: 12, left: 12,
+    backgroundColor: 'rgba(17,24,39,0.85)',
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
+  },
+  upgradeBadgeText: { color: '#a3e635', fontSize: 11, fontWeight: '700' },
+
+  placeholderBg:     { backgroundColor: '#1a2e1a', justifyContent: 'center', alignItems: 'center' },
+  placeholderIcon:   { fontSize: 48, opacity: 0.3 },
+  thumbnailOverlay:  { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.42)' },
+  loadPromptContent: {
+    ...StyleSheet.absoluteFillObject, justifyContent: 'center',
+    alignItems: 'center', paddingHorizontal: 24,
+  },
+  loadPromptTitle:   { color: '#ffffff', fontSize: 16, fontWeight: '700', marginBottom: 6, letterSpacing: 0.5 },
+  loadPromptSub:     { color: 'rgba(255,255,255,0.6)', fontSize: 11, textAlign: 'center', marginBottom: 20, lineHeight: 16 },
+  load3dButton: {
+    backgroundColor: '#10b981', paddingHorizontal: 22, paddingVertical: 11,
+    borderRadius: 100, elevation: 8,
+    shadowColor: '#10b981', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 12,
+  },
+  load3dButtonText: { color: '#ffffff', fontSize: 14, fontWeight: '700', letterSpacing: 0.3 },
 });

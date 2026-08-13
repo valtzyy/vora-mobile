@@ -129,7 +129,9 @@ export interface ScanRecord {
   biomassa_kg: number | null;
   karbon_kg: number | null;
   co2e_kg: number | null;
-  splat_file_url: string;          // URL ke .ply di Cloudflare R2
+  splat_file_url: string;          // URL ke .ply atau .ksplat di Cloudflare R2
+  points3d_url?: string | null;    // URL ke points3d.ply (decimated point cloud) — derived from splat_file_url, not stored in DB
+
   thumbnail_url?: string | null;
   confidence_note?: string;
   // Species
