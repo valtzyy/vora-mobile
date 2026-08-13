@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  StyleSheet,
   StatusBar,
   ActivityIndicator,
   Alert,
@@ -18,6 +17,8 @@ import { formatCO2e, formatDBH, formatHeight, getDisplaySpecies } from '@vora/do
 import type { PlotsStackParamList } from '../../navigation/types';
 import { client } from '../../lib/voraClient';
 import { useAuth } from '../../lib/AuthContext';
+import { API_BASE_URL } from '../../lib/config';
+import { downloadAndShare } from '../../lib/fileShare';
 import PlotGrid, { type PlotGridPosition } from '../../components/plots/PlotGrid';
 import PlotMapView from '../../components/plots/PlotMapView';
 import ClaimTreeModal from '../../components/plots/ClaimTreeModal';
@@ -32,7 +33,7 @@ export default function PlotDetailScreen() {
   const route = useRoute<Route>();
   const navigation = useNavigation<Nav>();
   const { plotCode } = route.params;
-  const { user } = useAuth();
+  const { user, token } = useAuth();
 
   const [view, setView] = useState<'grid' | 'map'>('grid');
   const [claimOpen, setClaimOpen] = useState(false);
@@ -54,6 +55,93 @@ export default function PlotDetailScreen() {
   const scans = data?.scans ?? [];
   const aggregation = data?.aggregation;
   const isOwner = !!(user && plot?.owner_user_id === user.id);
+
+  const shannonIndex = useMemo(() => {
+    if (scans.length === 0) return 0.0;
+    const speciesCounts: Record<string, number> = {};
+    let unidentifiedCount = 0;
+    
+    for (const s of scans) {
+      let preds = s.species_predictions;
+      if (typeof preds === 'string') {
+        try {
+          preds = JSON.parse(preds);
+        } catch {
+          preds = null;
+        }
+      }
+      const name = (Array.isArray(preds) && preds.length > 0) ? preds[0]?.scientific_name : null;
+      if (name) {
+        const cleanName = name.trim().toLowerCase();
+        speciesCounts[cleanName] = (speciesCounts[cleanName] || 0) + 1;
+      } else {
+        unidentifiedCount++;
+      }
+    }
+
+    let sum = 0.0;
+    for (const count of Object.values(speciesCounts)) {
+      const p_i = count / scans.length;
+      sum += p_i * Math.log(p_i);
+    }
+    if (unidentifiedCount > 0) {
+      const p_u = unidentifiedCount / scans.length;
+      sum += p_u * Math.log(p_u);
+    }
+    return -sum;
+  }, [scans]);
+
+  const { diversityLevel, diversityDesc } = useMemo(() => {
+    if (scans.length === 0) {
+      return {
+        diversityLevel: 'No Trees Yet',
+        diversityDesc: 'Add trees to this plot to evaluate species biodiversity.'
+      };
+    }
+    if (shannonIndex < 1.5) {
+      return {
+        diversityLevel: 'Low Diversity',
+        diversityDesc: 'This plot has low species diversity, meaning it is dominated by one or a few species.'
+      };
+    } else if (shannonIndex <= 3.0) {
+      return {
+        diversityLevel: 'Medium Diversity',
+        diversityDesc: 'This plot has moderate species diversity, indicating a healthy mix of species.'
+      };
+    } else {
+      return {
+        diversityLevel: 'High Diversity',
+        diversityDesc: 'This plot has high species diversity, reflecting a highly resilient ecological structure.'
+      };
+    }
+  }, [shannonIndex, scans.length]);
+
+  const handleExportPress = () => {
+    if (!plot) return;
+    Alert.alert(
+      'Export Carbon Data',
+      'Select a format to download and share the plot carbon metrics:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Export CSV',
+          onPress: () => {
+            const url = `${API_BASE_URL}/plots/${plot.plot_code}/export?format=csv`;
+            const filename = `Plot_${plot.plot_code}_Carbon_Data.csv`;
+            downloadAndShare(url, filename, 'text/csv', token);
+          }
+        },
+        {
+          text: 'Export Excel (.xlsx)',
+          onPress: () => {
+            const url = `${API_BASE_URL}/plots/${plot.plot_code}/export?format=xlsx`;
+            const filename = `Plot_${plot.plot_code}_Carbon_Data.xlsx`;
+            downloadAndShare(url, filename, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', token);
+          }
+        }
+      ]
+    );
+  };
 
   const stats = useMemo(() => {
     if (scans.length === 0) return { avgDbh: null, avgHeight: null, topSpecies: [] as [string, number][] };
@@ -107,21 +195,24 @@ export default function PlotDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#16a34a" />
+      <SafeAreaView className="flex-1 justify-center items-center p-6 bg-white">
+        <ActivityIndicator size="large" color="#059669" />
       </SafeAreaView>
     );
   }
 
   if (isError || !plot) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
-        <Text style={styles.errorTitle}>Could Not Load Plot</Text>
-        <Text style={styles.errorSubtitle}>
+      <SafeAreaView className="flex-1 justify-center items-center p-6 bg-white">
+        <Text className="text-lg font-bold text-red-650 mb-1.5">Could Not Load Plot</Text>
+        <Text className="text-xs text-slate-500 text-center mb-4">
           {error instanceof VoraApiError ? error.detail : (error as Error)?.message || 'Plot not found.'}
         </Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-          <Text style={styles.retryButtonText}>Retry</Text>
+        <TouchableOpacity
+          className="bg-emerald-600 py-2.5 px-5 rounded-xl active:scale-[0.97]"
+          onPress={() => refetch()}
+        >
+          <Text className="text-white text-xs font-bold">Retry</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -133,33 +224,46 @@ export default function PlotDetailScreen() {
       : null;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView className="flex-1 bg-white">
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.title}>{plot.name}</Text>
-            {!!plot.owner?.display_name && <Text style={styles.owner}>by {plot.owner.display_name}</Text>}
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+        <View className="flex-row justify-between items-start mb-1">
+          <View className="flex-1">
+            <Text className="text-2xl font-bold text-slate-900">{plot.name}</Text>
+            {!!plot.owner?.display_name && (
+              <Text className="text-xs text-slate-400 mt-0.5">by {plot.owner.display_name}</Text>
+            )}
           </View>
           {isOwner && (
-            <TouchableOpacity style={styles.editButton} onPress={() => setEditOpen(true)}>
-              <Text style={styles.editButtonText}>Edit</Text>
+            <TouchableOpacity
+              className="bg-slate-100 px-3.5 py-2 rounded-xl active:scale-[0.97]"
+              onPress={() => setEditOpen(true)}
+            >
+              <Text className="text-xs font-bold text-slate-650">Edit</Text>
             </TouchableOpacity>
           )}
         </View>
 
-        {!!plot.description && <Text style={styles.description}>{plot.description}</Text>}
+        {!!plot.description && (
+          <Text className="text-xs text-slate-500 mt-2 mb-4 leading-5 font-medium">
+            {plot.description}
+          </Text>
+        )}
 
         {/* Carbon target gauge */}
-        <View style={styles.carbonCard}>
-          <Text style={styles.carbonLabel}>Total Carbon Stored</Text>
-          <Text style={styles.carbonValue}>{formatCO2e(aggregation?.total_co2e_kg ?? 0, 0)}</Text>
+        <View className="bg-slate-50 border border-slate-200/60 rounded-2xl p-5 mb-4.5 shadow-sm">
+          <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+            Total Carbon Stored
+          </Text>
+          <Text className="text-3xl font-bold text-slate-900 mb-2.5">
+            {formatCO2e(aggregation?.total_co2e_kg ?? 0, 0)}
+          </Text>
           {targetProgress != null && (
             <>
-              <View style={styles.progressTrack}>
-                <View style={[styles.progressFill, { width: `${targetProgress}%` }]} />
+              <View className="h-2 rounded-full bg-slate-200 overflow-hidden">
+                <View className="h-full bg-emerald-500 rounded-full" style={{ width: `${targetProgress}%` }} />
               </View>
-              <Text style={styles.progressLabel}>
+              <Text className="text-[10px] text-slate-400 mt-1.5 font-medium">
                 {targetProgress.toFixed(0)}% of {formatCO2e(plot.target_co2e_kg, 0)} target
               </Text>
             </>
@@ -167,43 +271,79 @@ export default function PlotDetailScreen() {
         </View>
 
         {/* Stats row */}
-        <View style={styles.statsRow}>
+        <View className="flex-row gap-3 mb-4.5">
           <StatBox label="Trees" value={String(scans.length)} />
           <StatBox label="Avg DBH" value={formatDBH(stats.avgDbh)} />
           <StatBox label="Avg Height" value={formatHeight(stats.avgHeight)} />
         </View>
 
-        {/* Species distribution */}
+        {/* Species Distribution & Biodiversity card */}
         {stats.topSpecies.length > 0 && (
-          <View style={styles.speciesCard}>
-            <Text style={styles.sectionTitle}>Species Distribution</Text>
-            {stats.topSpecies.map(([name, count]) => (
-              <View key={name} style={styles.speciesRow}>
-                <Text style={styles.speciesName} numberOfLines={1}>{name}</Text>
-                <Text style={styles.speciesCount}>{count}</Text>
+          <View className="bg-white border border-slate-200/80 rounded-2xl p-5 mb-4.5 shadow-sm">
+            <Text className="font-bold text-[10px] text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 mb-3">
+              Species Distribution & Biodiversity
+            </Text>
+
+            {/* Shannon-Wiener Biodiversity Index Display */}
+            <View className="bg-slate-50 border border-slate-200/50 rounded-xl p-3.5 flex flex-col gap-1.5 mb-4">
+              <View className="flex-row justify-between items-baseline">
+                <Text className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Shannon-Wiener Index (H')
+                </Text>
+                <Text className="text-base font-bold text-[#191919]">
+                  {shannonIndex.toFixed(2)}
+                </Text>
               </View>
-            ))}
+              <View className="flex-row items-center gap-1.5">
+                <View
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    shannonIndex < 1.5 ? 'bg-amber-500' : shannonIndex <= 3.0 ? 'bg-emerald-500' : 'bg-sky-500'
+                  }`}
+                />
+                <Text className="text-xs font-bold text-slate-700">{diversityLevel}</Text>
+              </View>
+              <Text className="text-[10px] text-slate-500 leading-relaxed font-medium">
+                {diversityDesc}
+              </Text>
+              <Text className="border-t border-slate-200/80 mt-1 pt-1.5 text-[9px] text-slate-450 leading-relaxed italic font-medium">
+                Note: Higher biodiversity forests are generally associated with premium pricing in voluntary carbon markets due to ecological resilience and environmental co-benefits.
+              </Text>
+            </View>
+
+            <Text className="font-bold text-[9px] text-slate-400 uppercase tracking-widest mb-3">
+              Contribution per Species
+            </Text>
+            <View className="flex flex-col gap-3">
+              {stats.topSpecies.map(([name, count]) => (
+                <View key={name} className="flex-row justify-between items-center">
+                  <Text className="text-xs text-slate-700 font-medium" numberOfLines={1}>
+                    {name}
+                  </Text>
+                  <Text className="text-xs font-bold text-emerald-600">{count}</Text>
+                </View>
+              ))}
+            </View>
           </View>
         )}
 
         {/* Grid / Map toggle */}
-        <View style={styles.viewToggleRow}>
+        <View className="flex-row gap-2.5 mb-3">
           <TouchableOpacity
-            style={[styles.viewToggleButton, view === 'grid' && styles.viewToggleButtonActive]}
+            className={`py-2 px-4.5 rounded-full ${view === 'grid' ? 'bg-emerald-50' : 'bg-slate-100'} active:scale-[0.97]`}
             onPress={() => setView('grid')}
           >
-            <Text style={[styles.viewToggleText, view === 'grid' && styles.viewToggleTextActive]}>Grid</Text>
+            <Text className={`text-xs font-bold ${view === 'grid' ? 'text-emerald-700' : 'text-slate-550'}`}>Grid</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.viewToggleButton, view === 'map' && styles.viewToggleButtonActive]}
+            className={`py-2 px-4.5 rounded-full ${view === 'map' ? 'bg-emerald-50' : 'bg-slate-100'} active:scale-[0.97]`}
             onPress={() => setView('map')}
           >
-            <Text style={[styles.viewToggleText, view === 'map' && styles.viewToggleTextActive]}>Map</Text>
+            <Text className={`text-xs font-bold ${view === 'map' ? 'text-emerald-700' : 'text-slate-550'}`}>Map</Text>
           </TouchableOpacity>
         </View>
 
         {scans.length === 0 ? (
-          <Text style={styles.emptyHint}>No trees in this plot yet.</Text>
+          <Text className="text-xs text-slate-400 italic mb-4">No trees in this plot yet.</Text>
         ) : view === 'grid' ? (
           <PlotGrid scans={scans} onPositionsChange={handlePositionsChange} />
         ) : (
@@ -211,24 +351,37 @@ export default function PlotDetailScreen() {
         )}
 
         {isOwner && (
-          <TouchableOpacity style={styles.addTreeButton} onPress={() => setClaimOpen(true)}>
-            <Text style={styles.addTreeButtonText}>+ Add Tree to Plot</Text>
-          </TouchableOpacity>
+          <View className="flex-row gap-3 mb-5 mt-3">
+            <TouchableOpacity
+              className="flex-1 bg-emerald-600 py-3 rounded-xl items-center justify-center active:scale-[0.97]"
+              onPress={() => setClaimOpen(true)}
+              activeOpacity={0.8}
+            >
+              <Text className="text-white text-xs font-bold">+ Add Tree</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              className="flex-1 bg-[#191919] py-3 rounded-xl items-center justify-center active:scale-[0.97]"
+              onPress={handleExportPress}
+              activeOpacity={0.8}
+            >
+              <Text className="text-white text-xs font-bold">📤 Export Data</Text>
+            </TouchableOpacity>
+          </View>
         )}
 
         {/* Tree list */}
-        <Text style={styles.sectionTitle}>Trees</Text>
+        <Text className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Trees</Text>
         {scans.map((scan) => (
-          <View key={scan.tree_code} style={styles.treeRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.treeCode}>{scan.tree_code}</Text>
-              <Text style={styles.treeStats}>
+          <View key={scan.tree_code} className="flex-row items-center py-3.5 border-b border-slate-100">
+            <View className="flex-1">
+              <Text className="text-sm font-bold text-slate-900 font-mono">{scan.tree_code}</Text>
+              <Text className="text-xs text-slate-400 mt-0.5 font-medium">
                 DBH {formatDBH(scan.dbh_cm)} · {formatHeight(scan.tinggi_m)} · {formatCO2e(scan.co2e_kg, 0)}
               </Text>
             </View>
             {isOwner && (
               <TouchableOpacity onPress={() => handleRemoveScan(scan.tree_code)} hitSlop={8}>
-                <Text style={styles.removeText}>Remove</Text>
+                <Text className="text-xs font-bold text-red-500">Remove</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -253,72 +406,9 @@ export default function PlotDetailScreen() {
 
 function StatBox({ label, value }: { label: string; value: string }) {
   return (
-    <View style={styles.statBox}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+    <View className="flex-1 bg-slate-50 border border-slate-200/50 rounded-xl py-3.5 items-center">
+      <Text className="text-base font-bold text-slate-900">{value}</Text>
+      <Text className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">{label}</Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#ffffff' },
-  container: { padding: 20, paddingBottom: 40 },
-  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#ffffff' },
-  errorTitle: { fontSize: 18, fontWeight: '700', color: '#dc2626', marginBottom: 6 },
-  errorSubtitle: { fontSize: 13, color: '#6b7280', textAlign: 'center', marginBottom: 16 },
-  retryButton: { backgroundColor: '#16a34a', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
-  retryButtonText: { color: '#ffffff', fontSize: 13, fontWeight: '700' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 },
-  title: { fontSize: 24, fontWeight: '700', color: '#111827' },
-  owner: { fontSize: 13, color: '#9ca3af', marginTop: 2 },
-  editButton: { backgroundColor: '#f3f4f6', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
-  editButtonText: { fontSize: 12, fontWeight: '700', color: '#374151' },
-  description: { fontSize: 13, color: '#6b7280', marginTop: 8, marginBottom: 16, lineHeight: 19 },
-  carbonCard: {
-    backgroundColor: '#f0fdf4',
-    borderRadius: 14,
-    padding: 18,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#bbf7d0',
-  },
-  carbonLabel: { fontSize: 12, fontWeight: '700', color: '#15803d', textTransform: 'uppercase', marginBottom: 6 },
-  carbonValue: { fontSize: 28, fontWeight: '900', color: '#16a34a', marginBottom: 10 },
-  progressTrack: { height: 8, borderRadius: 4, backgroundColor: '#dcfce7', overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: '#16a34a', borderRadius: 4 },
-  progressLabel: { fontSize: 11, color: '#15803d', marginTop: 6 },
-  statsRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  statBox: { flex: 1, backgroundColor: '#f9fafb', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  statValue: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  statLabel: { fontSize: 11, color: '#9ca3af', marginTop: 2 },
-  speciesCard: { backgroundColor: '#ffffff', borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', padding: 16, marginBottom: 16 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 10 },
-  speciesRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
-  speciesName: { fontSize: 13, color: '#374151', flex: 1 },
-  speciesCount: { fontSize: 13, fontWeight: '700', color: '#16a34a' },
-  viewToggleRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  viewToggleButton: { paddingVertical: 8, paddingHorizontal: 18, borderRadius: 20, backgroundColor: '#f3f4f6' },
-  viewToggleButtonActive: { backgroundColor: '#dcfce7' },
-  viewToggleText: { fontSize: 13, fontWeight: '600', color: '#6b7280' },
-  viewToggleTextActive: { color: '#166534' },
-  emptyHint: { fontSize: 13, color: '#9ca3af', marginBottom: 16 },
-  addTreeButton: {
-    backgroundColor: '#16a34a',
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 4,
-    marginBottom: 20,
-  },
-  addTreeButtonText: { color: '#ffffff', fontSize: 13, fontWeight: '700' },
-  treeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  treeCode: { fontSize: 14, fontWeight: '700', color: '#111827', fontFamily: 'monospace' },
-  treeStats: { fontSize: 12, color: '#6b7280', marginTop: 2 },
-  removeText: { fontSize: 12, fontWeight: '700', color: '#dc2626' },
-});

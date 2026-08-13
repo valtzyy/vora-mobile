@@ -33,6 +33,8 @@ import {
 import type { ScanStackParamList } from '../../navigation/types';
 import { client } from '../../lib/voraClient';
 import { useAuth } from '../../lib/AuthContext';
+import { API_BASE_URL } from '../../lib/config';
+import { downloadAndShare } from '../../lib/fileShare';
 import SplatViewer from '../../components/SplatViewer';
 import RecalibrateModal from '../../components/RecalibrateModal';
 import ClaimToPlotModal from '../../components/plots/ClaimToPlotModal';
@@ -54,6 +56,13 @@ export default function ScanResultScreen() {
   const [selectedScanId, setSelectedScanId] = useState<number | null>(null);
   const [recalibrateOpen, setRecalibrateOpen] = useState(false);
   const [claimOpen, setClaimOpen] = useState(false);
+
+  const handleCertificatePress = () => {
+    if (!scan) return;
+    const url = `${API_BASE_URL}/scans/${scan.tree_code}/certificate`;
+    const filename = `Certificate_${scan.tree_code}.pdf`;
+    downloadAndShare(url, filename, 'application/pdf', token);
+  };
 
   const { data: history, isLoading, isError, error, refetch, isRefetching } = useQuery({
     queryKey: ['scan-history', treeCode],
@@ -235,6 +244,13 @@ export default function ScanResultScreen() {
           )}
 
           <View style={styles.actions}>
+            <TouchableOpacity
+              style={styles.certificateButton}
+              activeOpacity={0.8}
+              onPress={handleCertificatePress}
+            >
+              <Text style={styles.certificateButtonText}>📄 Download Carbon Certificate</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.primaryButton}
               activeOpacity={0.8}
@@ -443,6 +459,14 @@ const styles = StyleSheet.create({
   },
   recalibrateButtonText: { color: '#1d4ed8', fontSize: 13, fontWeight: '600' },
   actions: { gap: 12 },
+  certificateButton: {
+    backgroundColor: '#191919',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  certificateButtonText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
   primaryButton: {
     backgroundColor: '#16a34a',
     paddingVertical: 16,

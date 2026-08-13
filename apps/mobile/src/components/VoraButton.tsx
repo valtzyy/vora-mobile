@@ -22,19 +22,19 @@ export default function VoraButton({
 }: VoraButtonProps) {
   
   // Base classes with active bounce effect matching web
-  let buttonClass = 'py-[14px] px-6 rounded-lg flex-row justify-center items-center active:scale-[0.97] transition-transform ';
+  let buttonClass = 'py-[14px] px-6 rounded-xl flex-row justify-center items-center active:scale-[0.97] transition-transform ';
   let titleClass = 'font-sansMedium text-[15px] ';
   let loaderColor = '#ffffff';
 
   if (variant === 'primary') {
-    buttonClass += 'bg-vora-green ';
+    buttonClass += 'bg-emerald-600 ';
     titleClass += 'text-white ';
   } else if (variant === 'secondary') {
-    buttonClass += 'bg-vora-black ';
+    buttonClass += 'bg-[#191919] ';
     titleClass += 'text-white ';
   } else if (variant === 'outline') {
-    buttonClass += 'bg-transparent border border-gray-200 active:bg-gray-50 ';
-    titleClass += 'text-vora-dark ';
+    buttonClass += 'bg-transparent border border-slate-200 active:bg-slate-50 ';
+    titleClass += 'text-slate-900 ';
     loaderColor = '#191919';
   }
 
