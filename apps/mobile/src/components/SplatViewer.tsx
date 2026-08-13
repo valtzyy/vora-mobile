@@ -43,7 +43,7 @@ export default function SplatViewer({
     v: '11',
     code: treeCode,
     url: splatFileUrl,
-    proxy: 'true', // let viewer.html rewrite to /splat-proxy/... internally
+    proxy: 'false', // load directly from custom R2 domain (files.azzaky.web.id)
   });
   if (token) params.set('token', token);
   const viewerUrl = `${API_BASE_URL}/viewer.html?${params.toString()}`;
