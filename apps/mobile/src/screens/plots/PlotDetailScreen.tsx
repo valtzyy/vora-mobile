@@ -239,7 +239,7 @@ export default function PlotDetailScreen() {
               className="bg-slate-100 px-3.5 py-2 rounded-xl active:scale-[0.97]"
               onPress={() => setEditOpen(true)}
             >
-              <Text className="text-xs font-bold text-slate-650">Edit</Text>
+              <Text className="text-xs font-bold text-slate-600">Edit</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -305,7 +305,7 @@ export default function PlotDetailScreen() {
               <Text className="text-[10px] text-slate-500 leading-relaxed font-medium">
                 {diversityDesc}
               </Text>
-              <Text className="border-t border-slate-200/80 mt-1 pt-1.5 text-[9px] text-slate-450 leading-relaxed italic font-medium">
+              <Text className="border-t border-slate-200/80 mt-1 pt-1.5 text-[9px] text-slate-400 leading-relaxed italic font-medium">
                 Note: Higher biodiversity forests are generally associated with premium pricing in voluntary carbon markets due to ecological resilience and environmental co-benefits.
               </Text>
             </View>
@@ -332,13 +332,13 @@ export default function PlotDetailScreen() {
             className={`py-2 px-4.5 rounded-full ${view === 'grid' ? 'bg-emerald-50' : 'bg-slate-100'} active:scale-[0.97]`}
             onPress={() => setView('grid')}
           >
-            <Text className={`text-xs font-bold ${view === 'grid' ? 'text-emerald-700' : 'text-slate-550'}`}>Grid</Text>
+            <Text className={`text-xs font-bold ${view === 'grid' ? 'text-emerald-700' : 'text-slate-500'}`}>Grid</Text>
           </TouchableOpacity>
           <TouchableOpacity
             className={`py-2 px-4.5 rounded-full ${view === 'map' ? 'bg-emerald-50' : 'bg-slate-100'} active:scale-[0.97]`}
             onPress={() => setView('map')}
           >
-            <Text className={`text-xs font-bold ${view === 'map' ? 'text-emerald-700' : 'text-slate-550'}`}>Map</Text>
+            <Text className={`text-xs font-bold ${view === 'map' ? 'text-emerald-700' : 'text-slate-500'}`}>Map</Text>
           </TouchableOpacity>
         </View>
 
