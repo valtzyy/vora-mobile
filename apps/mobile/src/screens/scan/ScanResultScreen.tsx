@@ -50,6 +50,7 @@ export default function ScanResultScreen() {
   const [selectedScanId, setSelectedScanId] = useState<number | null>(null);
   const [recalibrateOpen, setRecalibrateOpen] = useState(false);
   const [claimOpen, setClaimOpen] = useState(false);
+  const [scrollEnabled, setScrollEnabled] = useState(true);
 
   const handleCertificatePress = () => {
     if (!scan) return;
@@ -104,6 +105,7 @@ export default function ScanResultScreen() {
     <SafeAreaView className="flex-1 bg-white">
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <ScrollView
+        scrollEnabled={scrollEnabled}
         className="flex-1 bg-slate-50/60"
         contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
@@ -132,6 +134,7 @@ export default function ScanResultScreen() {
                 thumbnailUrl={scan.thumbnail_url}
                 token={token}
                 onMetricsUpdated={() => refetch()}
+                onInteractionStateChange={setScrollEnabled}
               />
             </View>
           ) : (

@@ -27,6 +27,7 @@ interface SplatViewerProps {
   token?: string | null;
   /** Fired when the gaussian viewer reports the manual 3D edit was saved. */
   onMetricsUpdated?: () => void;
+  onInteractionStateChange?: (interacting: boolean) => void;
   height?: number;
 }
 
@@ -75,6 +76,7 @@ export default function SplatViewer({
   thumbnailUrl,
   token,
   onMetricsUpdated,
+  onInteractionStateChange,
   height = 320,
 }: SplatViewerProps) {
   const webviewRef = useRef<WebView>(null);
@@ -258,27 +260,34 @@ export default function SplatViewer({
           </TouchableOpacity>
         </View>
       ) : (
-        <WebView
-          ref={webviewRef}
-          source={webviewSource}
-          style={styles.webview}
-          onMessage={handleMessage}
-          onError={e => setLoadError(e.nativeEvent.description || 'Unknown WebView error')}
-          onHttpError={e => setLoadError(`HTTP ${e.nativeEvent.statusCode}`)}
-          // Option C: WebView config tuning
-          javaScriptEnabled
-          domStorageEnabled
-          allowsInlineMediaPlayback
-          originWhitelist={['*']}
-          cacheEnabled={true}
-          androidLayerType={Platform.OS === 'android' ? 'hardware' : undefined}
-          mixedContentMode="always"
-          allowFileAccess={true}
-          allowFileAccessFromFileURLs={true}
-          allowUniversalAccessFromFileURLs={true}
-          // Option 6: WebView crash detection
-          onRenderProcessGone={() => setWebviewCrashed(true)}
-        />
+        <View
+          style={{ flex: 1 }}
+          onTouchStart={() => onInteractionStateChange?.(false)}
+          onTouchEnd={() => onInteractionStateChange?.(true)}
+          onTouchCancel={() => onInteractionStateChange?.(true)}
+        >
+          <WebView
+            ref={webviewRef}
+            source={webviewSource}
+            style={styles.webview}
+            onMessage={handleMessage}
+            onError={e => setLoadError(e.nativeEvent.description || 'Unknown WebView error')}
+            onHttpError={e => setLoadError(`HTTP ${e.nativeEvent.statusCode}`)}
+            // Option C: WebView config tuning
+            javaScriptEnabled
+            domStorageEnabled
+            allowsInlineMediaPlayback
+            originWhitelist={['*']}
+            cacheEnabled={true}
+            androidLayerType={Platform.OS === 'android' ? 'hardware' : undefined}
+            mixedContentMode="always"
+            allowFileAccess={true}
+            allowFileAccessFromFileURLs={true}
+            allowUniversalAccessFromFileURLs={true}
+            // Option 6: WebView crash detection
+            onRenderProcessGone={() => setWebviewCrashed(true)}
+          />
+        </View>
       )}
 
       {/* Loading overlay */}
