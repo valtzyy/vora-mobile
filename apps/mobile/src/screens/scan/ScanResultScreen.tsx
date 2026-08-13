@@ -8,6 +8,8 @@ import {
   StatusBar,
   RefreshControl,
   Image,
+  Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, type RouteProp } from '@react-navigation/native';
@@ -51,12 +53,43 @@ export default function ScanResultScreen() {
   const [recalibrateOpen, setRecalibrateOpen] = useState(false);
   const [claimOpen, setClaimOpen] = useState(false);
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [isProcessingCert, setIsProcessingCert] = useState(false);
 
   const handleCertificatePress = () => {
-    if (!scan) return;
-    const url = `${API_BASE_URL}/scans/${scan.tree_code}/certificate`;
-    const filename = `Certificate_${scan.tree_code}.pdf`;
-    downloadAndShare(url, filename, 'application/pdf', token);
+    if (!scan || isProcessingCert) return;
+
+    Alert.alert(
+      "Sertifikat Karbon",
+      "Pilih aksi untuk sertifikat karbon pohon ini:",
+      [
+        {
+          text: "🔍 Lihat Online",
+          onPress: () => {
+            const url = `${API_BASE_URL}/scans/${scan.tree_code}/certificate?token=${token || ''}`;
+            Linking.openURL(url).catch(() => {
+              Alert.alert("Error", "Gagal membuka URL sertifikat.");
+            });
+          }
+        },
+        {
+          text: "💾 Download & Share",
+          onPress: async () => {
+            setIsProcessingCert(true);
+            const url = `${API_BASE_URL}/scans/${scan.tree_code}/certificate`;
+            const filename = `Certificate_${scan.tree_code}.pdf`;
+            try {
+              await downloadAndShare(url, filename, 'application/pdf', token);
+            } finally {
+              setIsProcessingCert(false);
+            }
+          }
+        },
+        {
+          text: "Batal",
+          style: "cancel"
+        }
+      ]
+    );
   };
 
   const { data: history, isLoading, isError, error, refetch, isRefetching } = useQuery({
@@ -261,6 +294,7 @@ export default function ScanResultScreen() {
               title="📄 Download Carbon Certificate"
               variant="primary"
               onPress={handleCertificatePress}
+              isLoading={isProcessingCert}
             />
             <VoraButton
               title="Scan Another Tree"
