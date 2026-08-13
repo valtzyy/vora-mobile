@@ -273,6 +273,9 @@ export default function SplatViewer({
           cacheEnabled={true}
           androidLayerType={Platform.OS === 'android' ? 'hardware' : undefined}
           mixedContentMode="always"
+          allowFileAccess={true}
+          allowFileAccessFromFileURLs={true}
+          allowUniversalAccessFromFileURLs={true}
           // Option 6: WebView crash detection
           onRenderProcessGone={() => setWebviewCrashed(true)}
         />
