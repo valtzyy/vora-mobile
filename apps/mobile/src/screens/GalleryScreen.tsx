@@ -208,12 +208,14 @@ export default function GalleryScreen() {
               </View>
 
               {/* Species identification banner, styled nicely at the bottom if available */}
-              <View className="bg-emerald-50 border-t border-emerald-100/50 flex-row items-center p-2.5 rounded-b-xl -mx-2 -mb-2 mt-1">
-                <Text className="mr-1.5 text-xs">🌿</Text>
-                <Text className="text-xs font-sansMedium text-emerald-800 flex-1" numberOfLines={1}>
-                  {species.displayName}
-                </Text>
-              </View>
+              {species.isIdentified && (
+                <View className="bg-emerald-50 border-t border-emerald-100/50 flex-row items-center p-2.5 rounded-b-xl -mx-2 -mb-2 mt-1">
+                  <Text className="mr-1.5 text-xs">🌿</Text>
+                  <Text className="text-xs font-sansMedium text-emerald-800 flex-1" numberOfLines={1}>
+                    {species.displayName}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
           );
         })}
