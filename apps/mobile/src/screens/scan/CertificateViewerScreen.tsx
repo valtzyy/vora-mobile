@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, type RouteProp } from '@react-navigation/native';
@@ -27,6 +28,7 @@ export default function CertificateViewerScreen() {
 
   const [downloading, setDownloading] = useState(false);
   const [pdfBase64, setPdfBase64] = useState<string | null>(null);
+  const [localPdfUri, setLocalPdfUri] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const rawPdfUrl = `${API_BASE_URL}/scans/${treeCode}/certificate`;
@@ -56,6 +58,7 @@ export default function CertificateViewerScreen() {
         });
 
         if (active) {
+          setLocalPdfUri(downloadResult.uri);
           setPdfBase64(base64);
         }
       } catch (err) {
@@ -336,11 +339,15 @@ export default function CertificateViewerScreen() {
               <Text className="text-xs font-sansBold text-white font-bold">Download Directly</Text>
             </TouchableOpacity>
           </View>
-        ) : pdfBase64 ? (
+        ) : pdfBase64 && localPdfUri ? (
           <WebView
             ref={webviewRef}
             originWhitelist={['*']}
-            source={{ html: htmlContent }}
+            source={
+              Platform.OS === 'ios'
+                ? { uri: localPdfUri }
+                : { html: htmlContent }
+            }
             javaScriptEnabled={true}
             domStorageEnabled={true}
             allowFileAccess={true}
