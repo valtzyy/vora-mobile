@@ -18,6 +18,7 @@ export interface VideoSource {
 export interface UploadVideoOptions {
   frames: number;
   blurThresh: number;
+  posesPath?: string;
 }
 
 /**
@@ -44,9 +45,22 @@ export async function uploadVideoToBackend(
     throw new Error(`R2 upload failed: HTTP ${uploadResult.status}`);
   }
 
+  let cameraPoses: any[] | undefined = undefined;
+  if (options.posesPath) {
+    try {
+      const standardFS = require('expo-file-system');
+      const raw = await standardFS.readAsStringAsync(options.posesPath);
+      cameraPoses = JSON.parse(raw);
+      console.log(`[videoUpload] Loaded ${cameraPoses?.length} camera poses from ${options.posesPath}`);
+    } catch (err) {
+      console.error('[videoUpload] Failed to read poses file:', err);
+    }
+  }
+
   await client.pipeline.notifyUploadVideo({
     r2Key: key,
     frames: options.frames,
     blurThresh: options.blurThresh,
+    cameraPoses,
   });
 }

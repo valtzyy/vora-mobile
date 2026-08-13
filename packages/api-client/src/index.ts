@@ -255,12 +255,14 @@ export function createVoraClient(config: VoraClientConfig) {
       r2Key: string;
       frames?: number;
       blurThresh?: number;
+      cameraPoses?: any[];
     }): Promise<UploadResponse> {
       return apiFetch("POST", "/upload_video", {
         body: {
           r2_key: options.r2Key,
           frames: options.frames,
           blur_thresh: options.blurThresh,
+          camera_poses: options.cameraPoses,
         },
       });
     },

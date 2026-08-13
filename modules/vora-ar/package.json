@@ -1,0 +1,8 @@
+{
+  "name": "vora-ar",
+  "version": "1.0.0",
+  "description": "Expo native module for ARCore VIO tracking during camera capture",
+  "main": "index.ts",
+  "types": "index.ts",
+  "private": true
+}

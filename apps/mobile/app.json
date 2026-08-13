@@ -46,7 +46,15 @@
           "locationWhenInUsePermission": "Vora can tag scans and plots with your location."
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 24
+          }
+        }
+      ]
     ]
   }
 }

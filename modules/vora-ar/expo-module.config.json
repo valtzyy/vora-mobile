@@ -1,0 +1,11 @@
+{
+  "platforms": [
+    "android"
+  ],
+  "android": {
+    "package": "com.vora.ar",
+    "modules": [
+      "com.vora.ar.VoraArModule"
+    ]
+  }
+}

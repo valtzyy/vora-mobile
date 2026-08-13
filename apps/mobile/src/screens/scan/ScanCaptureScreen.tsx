@@ -37,7 +37,7 @@ export default function ScanCaptureScreen() {
   const cameraRef = useRef<CameraView>(null);
 
   const [camPermission, requestCamPermission] = useCameraPermissions();
-  const [micPermission, requestMicPermission] = useMicrophonePermissions();
+  const [micPermission, requestMicrophonePermission] = useMicrophonePermissions();
 
   const [treeCode, setTreeCode] = useState('');
   const [removeBackground, setRemoveBackground] = useState(false);
@@ -47,6 +47,25 @@ export default function ScanCaptureScreen() {
   const [stage, setStage] = useState<Stage>('form');
   const [isRecording, setIsRecording] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // ARCore VIO state & refs
+  const [arSupported, setArSupported] = useState(false);
+  const [posesPath, setPosesPath] = useState<string | null>(null);
+  const poseIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  React.useEffect(() => {
+    try {
+      const voraAr = require('vora-ar');
+      if (typeof voraAr.isSupported === 'function') {
+        const supported = voraAr.isSupported();
+        setArSupported(supported);
+        console.log(`[ScanCaptureScreen] ARCore VIO support detected: ${supported}`);
+      }
+    } catch (e) {
+      console.log('[ScanCaptureScreen] VoraAr native module not available or not supported on this device/platform.');
+      setArSupported(false);
+    }
+  }, []);
 
   const pickVideoFile = async () => {
     try {
@@ -62,6 +81,7 @@ export default function ScanCaptureScreen() {
           mimeType: file.mimeType || 'video/mp4',
         });
         setErrorMessage(null);
+        setPosesPath(null); // Clear poses since it's an uploaded file
       }
     } catch (err) {
       console.error('Pick video error:', err);
@@ -78,7 +98,7 @@ export default function ScanCaptureScreen() {
       }
     }
     if (!micPermission?.granted) {
-      await requestMicPermission();
+      await requestMicrophonePermission();
     }
     setStage('camera');
   };
@@ -86,10 +106,38 @@ export default function ScanCaptureScreen() {
   const startRecording = async () => {
     if (!cameraRef.current) return;
     setIsRecording(true);
+    setPosesPath(null);
+
+    let activePosesPath: string | null = null;
+    if (arSupported) {
+      try {
+        const voraAr = require('vora-ar');
+        const FileSystem = require('expo-file-system');
+        const tempVideoPath = `${FileSystem.cacheDirectory}ar_temp_${Date.now()}.mp4`;
+        const tempPosesPath = `${FileSystem.cacheDirectory}poses_${Date.now()}.json`;
+        activePosesPath = tempPosesPath;
+
+        // Start native ARCore session + MediaRecorder
+        voraAr.startCapture(tempVideoPath);
+
+        // Sample VIO pose every 100ms
+        poseIntervalRef.current = setInterval(() => {
+          voraAr.recordPose();
+        }, 100);
+        console.log('[ScanCaptureScreen] ARCore VIO tracking session started in background');
+      } catch (err) {
+        console.error('[ScanCaptureScreen] Failed to start ARCore tracking session:', err);
+      }
+    }
+
     try {
       const result = await cameraRef.current.recordAsync();
       if (result?.uri) {
         setVideo({ uri: result.uri, name: 'tree_scan.mp4', mimeType: 'video/mp4' });
+        if (activePosesPath) {
+          setPosesPath(activePosesPath);
+          console.log(`[ScanCaptureScreen] Video recorded, associated with VIO poses at: ${activePosesPath}`);
+        }
       }
     } catch (err) {
       console.error('Camera recording error:', err);
@@ -101,6 +149,21 @@ export default function ScanCaptureScreen() {
   };
 
   const stopRecording = () => {
+    if (poseIntervalRef.current) {
+      clearInterval(poseIntervalRef.current);
+      poseIntervalRef.current = null;
+    }
+    if (arSupported) {
+      try {
+        const voraAr = require('vora-ar');
+        const FileSystem = require('expo-file-system');
+        const tempPosesPath = posesPath || `${FileSystem.cacheDirectory}poses_latest.json`;
+        const stats = voraAr.stopCapture(tempPosesPath);
+        console.log(`[ScanCaptureScreen] ARCore session stopped. Recorded ${stats.posesWritten} poses.`);
+      } catch (err) {
+        console.error('[ScanCaptureScreen] Failed to stop ARCore tracking session:', err);
+      }
+    }
     cameraRef.current?.stopRecording();
   };
 
@@ -113,7 +176,11 @@ export default function ScanCaptureScreen() {
     setErrorMessage(null);
     setStage('uploading');
     try {
-      await uploadVideoToBackend(video, { frames, blurThresh });
+      await uploadVideoToBackend(video, {
+        frames,
+        blurThresh,
+        posesPath: posesPath || undefined,
+      });
 
       setStage('extracting');
       const status = await pollPipelineStatus(client, {
@@ -153,6 +220,12 @@ export default function ScanCaptureScreen() {
               <Text className="color-white text-base font-bold">✕</Text>
             </TouchableOpacity>
             <Text className="color-white text-xs flex-1">Walk slowly around the trunk, keep it centered</Text>
+            {arSupported && (
+              <View className="flex-row items-center gap-1 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/40">
+                <View className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <Text className="text-[9px] font-sansBold text-emerald-400 tracking-wider">AR VIO</Text>
+              </View>
+            )}
           </View>
           <View className="items-center pb-10">
             <TouchableOpacity
