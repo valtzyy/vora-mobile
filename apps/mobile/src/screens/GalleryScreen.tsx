@@ -137,9 +137,8 @@ export default function GalleryScreen() {
               activeOpacity={0.75}
               className="bg-white rounded-[1.25rem] p-2 mb-5 border border-slate-200/80 shadow-sm"
               onPress={() => {
-                navigation.navigate('Scan', {
-                  screen: 'ScanResult',
-                  params: { treeCode: scan.tree_code },
+                navigation.navigate('ScanResult', {
+                  treeCode: scan.tree_code,
                 });
               }}
             >

@@ -7,10 +7,10 @@ import { useAuth, AuthProvider } from '../lib/AuthContext';
 
 // Screens
 import HomeScreen from '../screens/HomeScreen';
-import GalleryScreen from '../screens/GalleryScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import GalleryStack from './GalleryStack';
 import ScanStack from './ScanStack';
 import PlotsStack from './PlotsStack';
 
@@ -67,7 +67,7 @@ function AppTabs() {
       />
       <Tab.Screen
         name="Gallery"
-        component={GalleryScreen}
+        component={GalleryStack}
         options={{
           tabBarLabel: 'Gallery',
           tabBarIcon: ({ color, size }) => (

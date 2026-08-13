@@ -5,6 +5,11 @@ export type ScanStackParamList = {
   ScanResult: { treeCode: string };
 };
 
+export type GalleryStackParamList = {
+  GalleryList: undefined;
+  ScanResult: { treeCode: string };
+};
+
 export type PlotsStackParamList = {
   PlotsList: undefined;
   PlotDetail: { plotCode: string };
