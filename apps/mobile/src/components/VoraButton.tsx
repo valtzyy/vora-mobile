@@ -27,11 +27,13 @@ export default function VoraButton({
   let loaderColor = '#ffffff';
 
   if (variant === 'primary') {
-    buttonClass += 'bg-emerald-600 ';
+    buttonClass += 'bg-[#191919] active:bg-slate-800 ';
     titleClass += 'text-white ';
+    loaderColor = '#ffffff';
   } else if (variant === 'secondary') {
-    buttonClass += 'bg-[#191919] ';
-    titleClass += 'text-white ';
+    buttonClass += 'bg-[#F4F3F3] active:bg-[#eaeaea] border border-slate-200/60 ';
+    titleClass += 'text-[#191919] ';
+    loaderColor = '#191919';
   } else if (variant === 'outline') {
     buttonClass += 'bg-transparent border border-slate-200 active:bg-slate-50 ';
     titleClass += 'text-slate-900 ';
