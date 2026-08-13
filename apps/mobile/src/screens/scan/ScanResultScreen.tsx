@@ -307,11 +307,6 @@ export default function ScanResultScreen() {
               variant="primary"
               onPress={handleCertificatePress}
             />
-            <VoraButton
-              title="View All in Gallery"
-              variant="outline"
-              onPress={() => navigation.getParent()?.navigate('Gallery')}
-            />
           </View>
         </View>
       </ScrollView>
