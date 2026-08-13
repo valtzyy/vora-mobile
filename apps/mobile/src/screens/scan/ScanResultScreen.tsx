@@ -179,7 +179,7 @@ export default function ScanResultScreen() {
 
           {/* Species */}
           <View className="bg-emerald-50 border border-emerald-100/60 rounded-2xl p-4 mb-5">
-            <View className="flex-row justify-between items-center mb-1.5">
+            <View className="flex-row justify-between items-center mb-2">
               <View className="flex-row items-center gap-1">
                 <Ionicons name="leaf-outline" size={12} color="#065f46" />
                 <Text className="text-[10px] font-sansBold text-emerald-800 uppercase tracking-wider font-bold">Species Identification</Text>
@@ -190,7 +190,44 @@ export default function ScanResultScreen() {
                 </View>
               )}
             </View>
-            <Text className="text-base font-sansBold text-emerald-950 font-bold">{species.displayName}</Text>
+            <Text className="text-base font-sansBold text-emerald-950 font-bold mb-3">{species.displayName}</Text>
+
+            {species.allPredictions && species.allPredictions.length > 0 && (
+              <View className="mt-2 pt-2 border-t border-emerald-100/40">
+                <Text className="text-[9px] font-sansBold text-emerald-800 uppercase tracking-wider mb-2 font-bold">
+                  All Predictions
+                </Text>
+                <View className="gap-2">
+                  {species.allPredictions.map((pred, idx) => (
+                    <React.Fragment key={idx}>
+                      <View className="flex-row justify-between items-center">
+                        <View className="flex-1 pr-4">
+                          <Text className="text-xs font-sansBold text-emerald-950 font-bold italic">
+                            {pred.scientific_name}
+                          </Text>
+                          {pred.common_name ? (
+                            <Text className="text-[10px] font-sans text-emerald-800/80">
+                              {pred.common_name}
+                            </Text>
+                          ) : null}
+                        </View>
+                        <View className="items-end">
+                          <Text className="text-xs font-sansBold text-emerald-950 font-bold">
+                            {formatConfidence(pred.confidence)}
+                          </Text>
+                          <View className="w-16 h-1 bg-emerald-100 rounded-full mt-1 overflow-hidden">
+                            <View 
+                              className="h-full bg-emerald-500" 
+                              style={{ width: `${Math.min(100, Math.max(0, pred.confidence))}%` }} 
+                            />
+                          </View>
+                        </View>
+                      </View>
+                    </React.Fragment>
+                  ))}
+                </View>
+              </View>
+            )}
           </View>
 
           {/* How calculated */}
@@ -269,11 +306,6 @@ export default function ScanResultScreen() {
               title="View Carbon Certificate"
               variant="primary"
               onPress={handleCertificatePress}
-            />
-            <VoraButton
-              title="Scan Another Tree"
-              variant="secondary"
-              onPress={() => navigation.navigate('ScanCapture')}
             />
             <VoraButton
               title="View All in Gallery"
