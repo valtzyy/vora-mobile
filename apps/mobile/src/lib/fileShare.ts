@@ -1,5 +1,4 @@
-import * as FileSystem from 'expo-file-system';
-import { downloadAsync } from 'expo-file-system/legacy';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Alert } from 'react-native';
 
@@ -21,7 +20,7 @@ export async function downloadAndShare(
       headers['Authorization'] = `Bearer ${token}`;
     }
     
-    const downloadResult = await downloadAsync(url, localUri, {
+    const downloadResult = await FileSystem.downloadAsync(url, localUri, {
       headers,
     });
     
