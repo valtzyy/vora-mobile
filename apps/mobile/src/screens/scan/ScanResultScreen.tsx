@@ -180,7 +180,10 @@ export default function ScanResultScreen() {
           {/* Species */}
           <View className="bg-emerald-50 border border-emerald-100/60 rounded-2xl p-4 mb-5">
             <View className="flex-row justify-between items-center mb-1.5">
-              <Text className="text-[10px] font-sansBold text-emerald-800 uppercase tracking-wider font-bold">🌿 Species Identification</Text>
+              <View className="flex-row items-center gap-1">
+                <Ionicons name="leaf-outline" size={12} color="#065f46" />
+                <Text className="text-[10px] font-sansBold text-emerald-800 uppercase tracking-wider font-bold">Species Identification</Text>
+              </View>
               {species.confidence != null && (
                 <View className="bg-emerald-100/80 px-2 py-0.5 rounded">
                   <Text className="text-[10px] font-sansBold text-emerald-850 font-bold">{formatConfidence(species.confidence)} match</Text>
@@ -213,7 +216,10 @@ export default function ScanResultScreen() {
           {/* Warnings */}
           {warnings.length > 0 && (
             <View className="bg-red-50 border border-red-100 rounded-2xl p-4 mb-5">
-              <Text className="text-xs font-sansBold text-red-800 mb-2 font-bold">⚠️ Things to Know About This Estimate</Text>
+              <View className="flex-row items-center gap-1 mb-2">
+                <Ionicons name="alert-circle-outline" size={14} color="#991b1b" />
+                <Text className="text-xs font-sansBold text-red-800 font-bold">Things to Know About This Estimate</Text>
+              </View>
               {warnings.map((w, i) => (
                 <React.Fragment key={i}>
                   <Text className="text-[11px] font-sans text-red-650 mb-1 leading-relaxed">
