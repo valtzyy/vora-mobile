@@ -15,25 +15,30 @@ import { useNavigation } from '@react-navigation/native';
 import { formatCO2eCompact, getDisplaySpecies, isScanValid } from '@vora/domain';
 import type { Plot } from '@vora/types';
 import { client } from '../lib/voraClient';
-import { API_BASE_URL } from '../lib/config';
+import { useAuth } from '../lib/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import VoraButton from '../components/VoraButton';
 
 type Tab = 'trees' | 'plots';
 
-export default function GalleryScreen() {
+export default function DashboardScreen() {
   const navigation = useNavigation<any>();
+  const { user } = useAuth();
   const [tab, setTab] = useState<Tab>('trees');
 
+  // Query user scans
   const scansQuery = useQuery({
-    queryKey: ['scans', 'public'],
-    queryFn: () => client.scans.getList({ limit: 50 }),
+    queryKey: ['scans', 'mine', user?.id],
+    queryFn: () => client.plots.getUserScans(user!.id),
+    enabled: !!user && tab === 'trees',
     retry: 1,
   });
 
+  // Query user plots
   const plotsQuery = useQuery({
-    queryKey: ['plots', 'public'],
-    queryFn: () => client.plots.getList(),
+    queryKey: ['plots', 'mine', user?.id],
+    queryFn: () => client.plots.getUserPlots(user!.id),
+    enabled: !!user && tab === 'plots',
     retry: 1,
   });
 
@@ -45,22 +50,57 @@ export default function GalleryScreen() {
     activeQuery.refetch();
   };
 
+  // If not logged in
+  if (!user) {
+    return (
+      <SafeAreaView className="flex-1 bg-white justify-center items-center p-6">
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <View className="items-center w-full max-w-[320px]">
+          <View className="w-16 h-16 rounded-full bg-emerald-50 justify-center items-center mb-5 border border-emerald-100/50">
+            <Ionicons name="stats-chart-outline" size={30} color="#059669" />
+          </View>
+          <Text className="text-xl font-sansBold text-slate-900 mb-2 text-center font-bold">
+            Sign In Required
+          </Text>
+          <Text className="text-sm font-sans text-slate-500 text-center leading-relaxed mb-6">
+            Log in from the Account tab to access your private dashboard, view your plots, and manage your tree measurements.
+          </Text>
+          <VoraButton
+            title="Go to Account"
+            onPress={() => navigation.navigate('Account')}
+            variant="primary"
+            className="w-full"
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const isBusy = activeQuery.isLoading;
 
   return (
     <SafeAreaView className="flex-1 bg-white">
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      
+
       {/* Header */}
       <View className="px-5 pt-3 pb-2 flex-row justify-between items-center">
         <View className="flex-col">
-          <Text className="font-serif text-3xl text-vora-dark mb-0.5">Scan Gallery</Text>
+          <Text className="font-serif text-3xl text-vora-dark mb-0.5">Dashboard</Text>
           <Text className="text-[10px] font-sansBold text-slate-400 uppercase tracking-wider">
             {tab === 'trees'
-              ? `${displayScans.length} public ${displayScans.length === 1 ? 'tree' : 'trees'}`
-              : `${displayPlots.length} public ${displayPlots.length === 1 ? 'plot' : 'plots'}`}
+              ? `${displayScans.length} of your trees`
+              : `${displayPlots.length} of your plots`}
           </Text>
         </View>
+        {tab === 'plots' && (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('CreatePlot')}
+            className="bg-emerald-600 px-3.5 py-2 rounded-xl shadow-sm active:bg-emerald-700"
+          >
+            <Text className="color-white text-xs font-sansBold font-bold">+ New Plot</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Tabs */}
@@ -71,7 +111,7 @@ export default function GalleryScreen() {
           className={`px-4 py-2 rounded-full border ${tab === 'trees' ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200/60'}`}
         >
           <Text className={`text-xs font-sansBold ${tab === 'trees' ? 'text-emerald-700' : 'text-slate-500'}`}>
-            Public Trees
+            My Trees
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -80,21 +120,21 @@ export default function GalleryScreen() {
           className={`px-4 py-2 rounded-full border ${tab === 'plots' ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200/60'}`}
         >
           <Text className={`text-xs font-sansBold ${tab === 'plots' ? 'text-emerald-700' : 'text-slate-500'}`}>
-            Public Plots
+            My Plots
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Loading State */}
+      {/* Loading state */}
       {isBusy ? (
         <View className="flex-1 justify-center items-center p-6">
           <ActivityIndicator size="large" color="#10b981" />
           <Text className="mt-4 text-base font-sansBold text-vora-dark">
-            Loading {tab === 'trees' ? 'Trees...' : 'Plots...'}
+            Loading {tab === 'trees' ? 'My Trees...' : 'My Plots...'}
           </Text>
         </View>
       ) : activeQuery.isError ? (
-        /* Error State */
+        /* Error state */
         <View className="flex-1 justify-center items-center p-6">
           <View className="w-12 h-12 rounded-full bg-red-50 justify-center items-center mb-4 border border-red-100/50">
             <Ionicons name="alert-circle-outline" size={24} color="#dc2626" />
@@ -117,13 +157,21 @@ export default function GalleryScreen() {
             <Ionicons name={tab === 'trees' ? 'leaf-outline' : 'grid-outline'} size={28} color="#059669" />
           </View>
           <Text className="text-lg font-serif text-slate-900 mb-1.5 text-center">
-            No Public {tab === 'trees' ? 'Trees' : 'Plots'} Yet
+            No {tab === 'trees' ? 'Trees' : 'Plots'} Found
           </Text>
           <Text className="text-xs font-sans text-slate-500 text-center leading-relaxed mb-6 max-w-[260px]">
             {tab === 'trees'
-              ? 'No tree scans have been made public by the community yet.'
-              : 'No forestry plots have been set to public by Vora members yet.'}
+              ? "You haven't scanned or claimed any trees under your account yet."
+              : "You haven't created or claimed any plots under your account yet."}
           </Text>
+          {tab === 'plots' && (
+            <VoraButton
+              title="Create Your First Plot"
+              onPress={() => navigation.navigate('CreatePlot')}
+              variant="primary"
+              className="w-56"
+            />
+          )}
         </View>
       ) : (
         /* Success List */
@@ -172,12 +220,12 @@ export default function GalleryScreen() {
                         </View>
                       )}
 
-                      {/* ID Badge on top left */}
+                      {/* ID Badge */}
                       <View className="absolute top-3 left-3 bg-black/40 px-2 py-0.5 rounded border border-white/10">
                         <Text className="text-[10px] font-sansBold text-white font-bold">#{scan.id}</Text>
                       </View>
 
-                      {/* Date on top right */}
+                      {/* Date */}
                       <View className="absolute top-3 right-3 bg-black/40 px-2 py-0.5 rounded border border-white/10">
                         <Text className="text-[10px] font-sansMedium text-white font-semibold">
                           {new Date(scan.scan_date).toLocaleDateString(undefined, {
@@ -188,13 +236,13 @@ export default function GalleryScreen() {
                         </Text>
                       </View>
 
-                      {/* Tree Code on bottom left */}
+                      {/* Tree Code */}
                       <Text className="absolute bottom-3 left-3 text-lg font-sansBold text-white tracking-tight font-bold">
                         {scan.tree_code}
                       </Text>
                     </View>
 
-                    {/* Bottom Footer Details */}
+                    {/* Bottom details */}
                     <View className="flex-row justify-between items-center px-2 py-3">
                       <View className="flex-col">
                         <Text className="text-base font-sansBold text-slate-900 mb-0.5 font-bold">
@@ -251,8 +299,8 @@ export default function GalleryScreen() {
                     <Text className="text-base font-sansBold text-slate-900 flex-1 mr-2 font-bold" numberOfLines={1}>
                       {plot.name}
                     </Text>
-                    <View className="px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-100/50">
-                      <Text className="text-[9px] font-sansBold uppercase tracking-wide text-emerald-800 font-bold">
+                    <View className={`px-2 py-0.5 rounded-md ${plot.privacy === 'private' ? 'bg-amber-50 border border-amber-100/50' : 'bg-emerald-50 border border-emerald-100/50'}`}>
+                      <Text className={`text-[9px] font-sansBold uppercase tracking-wide font-bold ${plot.privacy === 'private' ? 'text-amber-800' : 'text-emerald-800'}`}>
                         {plot.privacy}
                       </Text>
                     </View>

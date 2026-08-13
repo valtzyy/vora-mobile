@@ -12,7 +12,7 @@ import RegisterScreen from '../screens/RegisterScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import GalleryStack from './GalleryStack';
 import ScanStack from './ScanStack';
-import PlotsStack from './PlotsStack';
+import DashboardStack from './DashboardStack';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -86,12 +86,12 @@ function AppTabs() {
         }}
       />
       <Tab.Screen
-        name="Plots"
-        component={PlotsStack}
+        name="Dashboard"
+        component={DashboardStack}
         options={{
-          tabBarLabel: 'Plots',
+          tabBarLabel: 'Dashboard',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="leaf-outline" size={size} color={color} />
+            <Ionicons name="stats-chart-outline" size={size} color={color} />
           ),
         }}
       />

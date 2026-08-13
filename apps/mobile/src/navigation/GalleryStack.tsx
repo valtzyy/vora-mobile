@@ -4,6 +4,7 @@ import type { GalleryStackParamList } from './types';
 import GalleryScreen from '../screens/GalleryScreen';
 import ScanResultScreen from '../screens/scan/ScanResultScreen';
 import CertificateViewerScreen from '../screens/scan/CertificateViewerScreen';
+import PlotDetailScreen from '../screens/plots/PlotDetailScreen';
 
 const Stack = createNativeStackNavigator<GalleryStackParamList>();
 
@@ -13,6 +14,7 @@ export default function GalleryStack() {
       <Stack.Screen name="GalleryList" component={GalleryScreen} />
       <Stack.Screen name="ScanResult" component={ScanResultScreen} />
       <Stack.Screen name="CertificateViewer" component={CertificateViewerScreen} />
+      <Stack.Screen name="PlotDetail" component={PlotDetailScreen} />
     </Stack.Navigator>
   );
 }
