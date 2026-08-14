@@ -67,7 +67,8 @@
             "minSdkVersion": 24
           }
         }
-      ]
+      ],
+      "expo-asset"
     ]
   }
 }

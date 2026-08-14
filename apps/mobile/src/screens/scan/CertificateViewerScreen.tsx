@@ -13,6 +13,7 @@ import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import * as IntentLauncher from 'expo-intent-launcher';
 import { API_BASE_URL } from '../../lib/config';
 import { useAuth } from '../../lib/AuthContext';
 import type { ScanStackParamList } from '../../navigation/types';
@@ -31,6 +32,7 @@ export default function CertificateViewerScreen() {
 
   const rawPdfUrl = `${API_BASE_URL}/scans/${treeCode}/certificate`;
 
+  /** Explicit "Download" action — opens the OS share sheet (save to Files/Drive, send to another app, etc). */
   const shareLocalPdf = async (uri: string) => {
     try {
       const isAvailable = await Sharing.isAvailableAsync();
@@ -39,12 +41,29 @@ export default function CertificateViewerScreen() {
       }
       await Sharing.shareAsync(uri, {
         mimeType: 'application/pdf',
-        dialogTitle: `View Certificate ${treeCode}`,
+        dialogTitle: `Certificate ${treeCode}`,
         UTI: 'com.adobe.pdf',
       });
     } catch (err) {
       console.error('[CertViewer Share Error]:', err);
-      Alert.alert('Error', (err as Error)?.message || 'Failed to open certificate.');
+      Alert.alert('Error', (err as Error)?.message || 'Failed to share certificate.');
+    }
+  };
+
+  /** Explicit "View" action (Android only) — opens the PDF read-only in the device's default
+   * viewer via an ACTION_VIEW intent, distinct from the Download/Share action above. Doesn't
+   * save/export anything on its own; that's what the Download button is for. */
+  const viewLocalPdfAndroid = async (uri: string) => {
+    try {
+      const contentUri = await FileSystem.getContentUriAsync(uri);
+      await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+        data: contentUri,
+        flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
+        type: 'application/pdf',
+      });
+    } catch (err) {
+      console.error('[CertViewer View Error]:', err);
+      Alert.alert('Error', (err as Error)?.message || 'No app found to view this certificate.');
     }
   };
 
@@ -67,11 +86,6 @@ export default function CertificateViewerScreen() {
       }
 
       setLocalPdfUri(downloadResult.uri);
-
-      // On Android, instantly open the native PDF viewer/share sheet
-      if (Platform.OS === 'android') {
-        await shareLocalPdf(downloadResult.uri);
-      }
     } catch (err) {
       console.error('[CertViewer Fetch Error]:', err);
       setLoadError((err as Error)?.message || 'Failed to retrieve certificate.');
@@ -85,9 +99,15 @@ export default function CertificateViewerScreen() {
     fetchPdf();
   }, [treeCode, token]);
 
-  const handleOpenPdf = async () => {
+  const handleDownload = async () => {
     if (localPdfUri) {
       await shareLocalPdf(localPdfUri);
+    }
+  };
+
+  const handleView = async () => {
+    if (localPdfUri) {
+      await viewLocalPdfAndroid(localPdfUri);
     }
   };
 
@@ -108,7 +128,7 @@ export default function CertificateViewerScreen() {
 
         {localPdfUri && (
           <TouchableOpacity
-            onPress={handleOpenPdf}
+            onPress={handleDownload}
             activeOpacity={0.7}
             className="p-2 rounded-full border bg-emerald-50 border-emerald-100"
           >
@@ -123,7 +143,7 @@ export default function CertificateViewerScreen() {
           <View className="flex-1 items-center justify-center p-6">
             <ActivityIndicator size="large" color="#10b981" />
             <Text className="text-sm font-sansMedium text-slate-500 mt-4 text-center">
-              Downloading certificate...
+              Loading certificate...
             </Text>
           </View>
         ) : loadError ? (
@@ -141,7 +161,7 @@ export default function CertificateViewerScreen() {
               className="px-6 py-3 bg-emerald-500 rounded-xl flex-row items-center gap-2"
             >
               <Ionicons name="refresh-outline" size={18} color="#ffffff" />
-              <Text className="text-sm font-sansBold text-white font-bold">Retry Download</Text>
+              <Text className="text-sm font-sansBold text-white font-bold">Try Again</Text>
             </TouchableOpacity>
           </View>
         ) : Platform.OS === 'ios' && localPdfUri ? (
@@ -153,24 +173,34 @@ export default function CertificateViewerScreen() {
             className="flex-1"
           />
         ) : (
-          /* Android Layout - Clean download completion view */
+          /* Android — no PDF renderer available in-app, so offer explicit
+             View (opens read-only in the device's default viewer) and
+             Download (share sheet) actions. Neither fires automatically. */
           <View className="flex-1 items-center justify-center p-6">
             <View className="w-16 h-16 bg-emerald-100 rounded-2xl items-center justify-center mb-4">
-              <Ionicons name="checkmark-circle" size={36} color="#10b981" />
+              <Ionicons name="document-text-outline" size={36} color="#10b981" />
             </View>
             <Text className="text-lg font-sansBold text-slate-800 font-bold text-center mb-2">
-              Certificate Downloaded!
+              Certificate Ready
             </Text>
             <Text className="text-sm font-sans text-slate-500 text-center mb-8 max-w-[285px]">
-              The certificate has been downloaded to your device. Tap below to view, print, or share it.
+              View the certificate, or download it to save or share it.
             </Text>
             <TouchableOpacity
-              onPress={handleOpenPdf}
+              onPress={handleView}
               activeOpacity={0.8}
-              className="w-full max-w-[260px] py-3.5 bg-emerald-500 rounded-xl flex-row items-center justify-center gap-2"
+              className="w-full max-w-[260px] py-3.5 bg-emerald-500 rounded-xl flex-row items-center justify-center gap-2 mb-3"
             >
-              <Ionicons name="document-text-outline" size={20} color="#ffffff" />
-              <Text className="text-base font-sansBold text-white font-bold">Open Certificate</Text>
+              <Ionicons name="eye-outline" size={20} color="#ffffff" />
+              <Text className="text-base font-sansBold text-white font-bold">View Certificate</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleDownload}
+              activeOpacity={0.8}
+              className="w-full max-w-[260px] py-3.5 bg-white border border-emerald-200 rounded-xl flex-row items-center justify-center gap-2"
+            >
+              <Ionicons name="download-outline" size={20} color="#10b981" />
+              <Text className="text-base font-sansBold text-emerald-600 font-bold">Download</Text>
             </TouchableOpacity>
           </View>
         )}
