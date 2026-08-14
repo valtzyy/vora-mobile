@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, StatusBar, TouchableOpacity } from 'react-native';
+import { View, Text, Image, ScrollView, StatusBar, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../lib/AuthContext';
 import VoraButton from '../components/VoraButton';
@@ -14,7 +14,11 @@ export default function HomeScreen() {
       
       {/* Hero Section */}
       <View className="bg-slate-50 border-b border-slate-200/50 px-6 pt-16 pb-12 rounded-b-[2rem]">
-        <Text className="text-4xl font-serif text-slate-900 mb-2">Vora</Text>
+        <Image
+          source={require('../../assets/logo-wordmark.png')}
+          resizeMode="contain"
+          style={{ height: 60, width: 120, marginBottom: 8 }}
+        />
         <Text className="text-[15px] font-sans text-slate-700 leading-6">
           Measure tree carbon from smartphone video. 
         </Text>
