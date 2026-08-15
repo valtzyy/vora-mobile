@@ -13,7 +13,7 @@ import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import * as IntentLauncher from 'expo-intent-launcher';
+// import * as IntentLauncher from 'expo-intent-launcher';
 import { API_BASE_URL } from '../../lib/config';
 import { useAuth } from '../../lib/AuthContext';
 import type { ScanStackParamList } from '../../navigation/types';
@@ -55,6 +55,7 @@ export default function CertificateViewerScreen() {
    * save/export anything on its own; that's what the Download button is for. */
   const viewLocalPdfAndroid = async (uri: string) => {
     try {
+      const IntentLauncher = require('expo-intent-launcher');
       const contentUri = await FileSystem.getContentUriAsync(uri);
       await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
         data: contentUri,
@@ -63,7 +64,7 @@ export default function CertificateViewerScreen() {
       });
     } catch (err) {
       console.error('[CertViewer View Error]:', err);
-      Alert.alert('Error', (err as Error)?.message || 'No app found to view this certificate.');
+      await shareLocalPdf(uri);
     }
   };
 

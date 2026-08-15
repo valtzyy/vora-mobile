@@ -8,15 +8,16 @@ import ScanResultScreen from '../screens/scan/ScanResultScreen';
 import CertificateViewerScreen from '../screens/scan/CertificateViewerScreen';
 
 const Stack = createNativeStackNavigator<ScanStackParamList>();
+const StackNavigator: any = Stack.Navigator;
 
 export default function ScanStack() {
   return (
-    <Stack.Navigator id={undefined} screenOptions={{ headerShown: false }}>
+    <StackNavigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="ScanCapture" component={ScanCaptureScreen} />
       <Stack.Screen name="ScanMarking" component={ScanMarkingScreen} />
       <Stack.Screen name="ScanProcessing" component={ScanProcessingScreen} options={{ gestureEnabled: false }} />
       <Stack.Screen name="ScanResult" component={ScanResultScreen} />
       <Stack.Screen name="CertificateViewer" component={CertificateViewerScreen} />
-    </Stack.Navigator>
+    </StackNavigator>
   );
 }

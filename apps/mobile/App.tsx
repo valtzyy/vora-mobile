@@ -1,6 +1,8 @@
 import './global.css';
 import React, { useEffect, useState } from 'react';
+import { StatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_700Bold } from '@expo-google-fonts/inter';
@@ -10,6 +12,9 @@ import RootNavigator from './src/navigation/RootNavigator';
 import { queryClient } from './src/lib/queryClient';
 import StartupSplash from './src/components/StartupSplash';
 import { configureNotificationHandler, attachNotificationResponseListener } from './src/lib/notifications';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const NavContainer: any = NavigationContainer;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const navigationRef = createNavigationContainerRef<any>();
@@ -47,12 +52,15 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <QueryClientProvider client={queryClient}>
-        <NavigationContainer ref={navigationRef}>
-          <RootNavigator />
-        </NavigationContainer>
-      </QueryClientProvider>
-      {showSplash && <StartupSplash onFinish={() => setShowSplash(false)} />}
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+          <NavContainer ref={navigationRef}>
+            <RootNavigator />
+          </NavContainer>
+        </QueryClientProvider>
+        {showSplash && <StartupSplash onFinish={() => setShowSplash(false)} />}
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

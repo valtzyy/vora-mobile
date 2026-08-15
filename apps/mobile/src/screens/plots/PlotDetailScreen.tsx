@@ -314,14 +314,17 @@ export default function PlotDetailScreen() {
               Contribution per Species
             </Text>
             <View className="flex flex-col gap-3">
-              {stats.topSpecies.map(([name, count]) => (
-                <View key={name} className="flex-row justify-between items-center">
-                  <Text className="text-xs text-slate-700 font-medium" numberOfLines={1}>
-                    {name}
-                  </Text>
-                  <Text className="text-xs font-bold text-emerald-600">{count}</Text>
-                </View>
-              ))}
+              {stats.topSpecies.map(([name, count]) => {
+                const KeyedView = View as any;
+                return (
+                  <KeyedView key={name} className="flex-row justify-between items-center">
+                    <Text className="text-xs text-slate-700 font-medium" numberOfLines={1}>
+                      {name}
+                    </Text>
+                    <Text className="text-xs font-bold text-emerald-600">{count}</Text>
+                  </KeyedView>
+                );
+              })}
             </View>
           </View>
         )}
@@ -371,8 +374,10 @@ export default function PlotDetailScreen() {
 
         {/* Tree list */}
         <Text className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Trees</Text>
-        {scans.map((scan) => (
-          <View key={scan.tree_code} className="flex-row items-center py-3.5 border-b border-slate-100">
+        {scans.map((scan) => {
+          const KeyedView = View as any;
+          return (
+          <KeyedView key={scan.tree_code} className="flex-row items-center py-3.5 border-b border-slate-100">
             <View className="flex-1">
               <Text className="text-sm font-bold text-slate-900 font-mono">{scan.tree_code}</Text>
               <Text className="text-xs text-slate-400 mt-0.5 font-medium">
@@ -384,8 +389,9 @@ export default function PlotDetailScreen() {
                 <Text className="text-xs font-bold text-red-500">Remove</Text>
               </TouchableOpacity>
             )}
-          </View>
-        ))}
+          </KeyedView>
+        );
+        })}
       </ScrollView>
 
       <ClaimTreeModal

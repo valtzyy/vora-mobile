@@ -1,5 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, StatusBar, ActivityIndicator, Image } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  StatusBar,
+  ActivityIndicator,
+  Image,
+  Alert,
+  ScrollView,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -15,6 +25,7 @@ type Nav = NativeStackNavigationProp<ScanStackParamList, 'ScanProcessing'>;
 type Route = RouteProp<ScanStackParamList, 'ScanProcessing'>;
 
 const STAGES = ['extracting', 'extracted', 'reconstructing', 'done'] as const;
+const MAX_TIMEOUT_SEC = 210;
 
 export default function ScanProcessingScreen() {
   const navigation = useNavigation<Nav>();
@@ -24,6 +35,7 @@ export default function ScanProcessingScreen() {
   const [status, setStatus] = useState<PipelineStatus | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [elapsedSec, setElapsedSec] = useState(0);
+  const [isTimedOut, setIsTimedOut] = useState(false);
   const cancelledRef = useRef(false);
 
   useEffect(() => {
@@ -32,9 +44,10 @@ export default function ScanProcessingScreen() {
     (async () => {
       try {
         const finalStatus = await pollPipelineStatus(client, {
+          treeCode,
           intervalMs: 3000,
           maxAttempts: 240, // 240 * 3s = 12 min
-          stopCondition: (s) => (s.stage === 'done' && s.tree_code === treeCode) || s.stage === 'error',
+          stopCondition: (s) => (s.stage === 'done' && (s.tree_code === treeCode || !s.tree_code)) || s.stage === 'error',
           onUpdate: (s) => {
             if (!cancelledRef.current) setStatus(s);
           },
@@ -60,32 +73,87 @@ export default function ScanProcessingScreen() {
     })();
 
     return () => {
-      cancelledRef.current = true;
+      // Non-destructive navigation: unmounting screen does NOT cancel remote job
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [treeCode]);
 
   useEffect(() => {
     if (!status?.started_at) return;
-    const tick = () => setElapsedSec(Math.max(0, Math.floor(Date.now() / 1000 - status.started_at!)));
+    const tick = () => {
+      const sec = Math.max(0, Math.floor(Date.now() / 1000 - status.started_at!));
+      setElapsedSec(sec);
+      if (sec > MAX_TIMEOUT_SEC && status?.stage === 'reconstructing') {
+        setIsTimedOut(true);
+      }
+    };
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [status?.started_at]);
+  }, [status?.started_at, status?.stage]);
 
-  const handleCancel = async () => {
-    cancelledRef.current = true;
-    try {
-      await client.pipeline.cancelJob();
-    } catch {
-      // best-effort
-    }
-    navigation.goBack();
+  const handleCancel = () => {
+    Alert.alert(
+      'Cancel Reconstruction?',
+      'Are you sure you want to abort this 3D reconstruction scan?',
+      [
+        { text: 'Keep Scanning', style: 'cancel' },
+        {
+          text: 'Cancel Scan',
+          style: 'destructive',
+          onPress: async () => {
+            cancelledRef.current = true;
+            try {
+              await client.pipeline.cancelJob();
+            } catch {}
+            navigation.goBack();
+          },
+        },
+      ]
+    );
+  };
+
+  const handleMinimize = () => {
+    // Navigate back to Dashboard without cancelling the background scan
+    navigation.navigate('ScanCapture');
   };
 
   const stageInfo = getPipelineStageInfo(status?.stage ?? 'reconstructing', status?.message);
   const mm = String(Math.floor(elapsedSec / 60)).padStart(2, '0');
   const ss = String(elapsedSec % 60).padStart(2, '0');
+
+  if (isTimedOut) {
+    return (
+      <SafeAreaView style={styles.centerContainer}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <View style={styles.stateCard}>
+          <View style={[styles.errorIconCircle, { backgroundColor: '#fef3c7' }]}>
+            <Text style={styles.errorIconText}>⏱️</Text>
+          </View>
+          <Text style={[styles.errorTitle, { color: '#b45309' }]}>Processing Timeout (210s)</Text>
+          <Text style={styles.errorSubtitle}>
+            Reconstruction is taking longer than usual (over 3.5 minutes). The cloud GPU may be in a temporary queue delay.
+          </Text>
+          <View style={{ width: '100%', gap: 12, marginTop: 8 }}>
+            <TouchableOpacity
+              style={[styles.primaryButton, { minHeight: 48 }]}
+              onPress={() => navigation.popToTop()}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.primaryButtonText}>Retry Scan</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.secondaryButton, { minHeight: 48 }]}
+              onPress={() => navigation.navigate('ScanCapture')}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.secondaryButtonText}>Return to Dashboard</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (errorMessage) {
     return (
@@ -97,7 +165,11 @@ export default function ScanProcessingScreen() {
           </View>
           <Text style={styles.errorTitle}>Processing Failed</Text>
           <Text style={styles.errorSubtitle}>{errorMessage}</Text>
-          <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.popToTop()} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={[styles.primaryButton, { minHeight: 48, width: '100%' }]}
+            onPress={() => navigation.popToTop()}
+            activeOpacity={0.8}
+          >
             <Text style={styles.primaryButtonText}>Back to Scan Setup</Text>
           </TouchableOpacity>
         </View>
@@ -108,9 +180,10 @@ export default function ScanProcessingScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Image
-          source={{ uri: `${API_BASE_URL}/frames/0000.jpg` }}
+          source={{ uri: `${API_BASE_URL}/frames/${treeCode}/0000.jpg` }}
+          defaultSource={{ uri: `${API_BASE_URL}/frames/0000.jpg` }}
           style={styles.previewImage}
           resizeMode="cover"
         />
@@ -131,13 +204,14 @@ export default function ScanProcessingScreen() {
             const stepIndex = STAGES.indexOf(s);
             const isDone = stepIndex < currentIndex || status?.stage === 'done';
             const isCurrent = s === status?.stage;
+            const KeyedView = View as any;
             return (
-              <View key={s} style={styles.checklistRow}>
+              <KeyedView key={s} style={styles.checklistRow}>
                 <Text style={styles.checklistIcon}>{isDone ? '✓' : isCurrent ? '●' : '○'}</Text>
                 <Text style={[styles.checklistText, (isDone || isCurrent) && styles.checklistTextActive]}>
                   {getPipelineStageInfo(s).label}
                 </Text>
-              </View>
+              </KeyedView>
             );
           })}
         </View>
@@ -147,20 +221,34 @@ export default function ScanProcessingScreen() {
           <Text style={styles.treeCodeText}>{treeCode}</Text>
         </View>
 
-        <TouchableOpacity style={styles.cancelButton} onPress={handleCancel} activeOpacity={0.8}>
-          <Text style={styles.cancelButtonText}>Cancel Scan</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.actionButtonsRow}>
+          <TouchableOpacity
+            style={[styles.secondaryButton, { flex: 1, minHeight: 48 }]}
+            onPress={handleMinimize}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.secondaryButtonText}>Run in Background</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.cancelButton, { minHeight: 48 }]}
+            onPress={handleCancel}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#ffffff' },
-  container: { flex: 1, padding: 24, alignItems: 'center' },
-  previewImage: { width: '100%', height: 160, borderRadius: 12, backgroundColor: '#e5e7eb' },
+  scrollContent: { padding: 24, alignItems: 'center' },
+  previewImage: { width: '100%', height: 160, borderRadius: 16, backgroundColor: '#e5e7eb' },
   stageLabel: { fontSize: 20, fontWeight: 'bold', color: '#111827', marginTop: 16, textAlign: 'center' },
-  stageDescription: { fontSize: 13, color: '#6b7280', marginTop: 4, textAlign: 'center' },
+  stageDescription: { fontSize: 13, color: '#6b7280', marginTop: 4, textAlign: 'center', lineHeight: 18 },
   progressTrack: {
     width: '100%',
     height: 8,
@@ -174,10 +262,12 @@ const styles = StyleSheet.create({
   checklistBox: {
     width: '100%',
     backgroundColor: '#f9fafb',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
-    marginTop: 24,
+    marginTop: 20,
     gap: 10,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
   },
   checklistRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   checklistIcon: { fontSize: 14, color: '#9ca3af', width: 18 },
@@ -189,14 +279,30 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: '#f3f4f6',
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginTop: 20,
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginTop: 16,
   },
   treeCodeLabel: { fontSize: 11, fontWeight: '700', color: '#6b7280' },
-  treeCodeText: { fontSize: 12, color: '#1f2937', fontFamily: 'monospace' },
-  cancelButton: { marginTop: 28, paddingVertical: 10, paddingHorizontal: 20 },
-  cancelButtonText: { color: '#dc2626', fontSize: 14, fontWeight: '600' },
+  treeCodeText: { fontSize: 12, color: '#1f2937', fontFamily: 'monospace', fontWeight: '600' },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 24,
+    width: '100%',
+  },
+  cancelButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#fee2e2',
+    backgroundColor: '#fef2f2',
+  },
+  cancelButtonText: { color: '#dc2626', fontSize: 13, fontWeight: '600' },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#ffffff' },
   stateCard: { alignItems: 'center', width: '100%', maxWidth: 340 },
   errorIconCircle: {
@@ -217,6 +323,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   primaryButtonText: { color: '#ffffff', fontSize: 15, fontWeight: 'bold' },
+  secondaryButton: {
+    backgroundColor: '#f3f4f6',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  secondaryButtonText: { color: '#374151', fontSize: 13, fontWeight: '600' },
 });

@@ -52,14 +52,17 @@ export default function PlotMapView({ scans, centroidLat, centroidLon, height = 
         style={StyleSheet.absoluteFill}
         initialRegion={initialRegion}
       >
-        {geoScans.map((scan) => (
-          <Marker
-            key={scan.tree_code}
-            coordinate={{ latitude: scan.gps_lat as number, longitude: scan.gps_lon as number }}
-            title={scan.tree_code}
-            description={`${formatCO2eCompact(scan.co2e_kg)} · DBH ${scan.dbh_cm?.toFixed(1) ?? '--'} cm`}
-          />
-        ))}
+        {geoScans.map((scan) => {
+          const KeyedMarker: any = Marker;
+          return (
+            <KeyedMarker
+              key={scan.tree_code}
+              coordinate={{ latitude: scan.gps_lat as number, longitude: scan.gps_lon as number }}
+              title={scan.tree_code}
+              description={`${formatCO2eCompact(scan.co2e_kg)} · DBH ${scan.dbh_cm?.toFixed(1) ?? '--'} cm`}
+            />
+          );
+        })}
       </MapView>
     </View>
   );

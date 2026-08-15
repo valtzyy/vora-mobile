@@ -20,6 +20,7 @@ export interface UploadVideoOptions {
   frames: number;
   blurThresh: number;
   posesPath?: string;
+  treeCode?: string;
   /** Called repeatedly during the R2 upload with bytes sent / total bytes. */
   onProgress?: (loaded: number, total: number) => void;
 }
@@ -76,5 +77,6 @@ export async function uploadVideoToBackend(
     frames: options.frames,
     blurThresh: options.blurThresh,
     cameraPoses,
+    treeCode: options.treeCode,
   });
 }
