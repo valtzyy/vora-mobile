@@ -75,6 +75,13 @@ export default function ScanCaptureScreen() {
       });
       if (!result.canceled && result.assets?.length) {
         const file = result.assets[0];
+        if (file.size && file.size > 150 * 1024 * 1024) {
+          Alert.alert(
+            'Video File Too Large',
+            `Selected video is ${(file.size / (1024 * 1024)).toFixed(1)} MB. Maximum allowed size is 150MB. Please select a 15–30s video.`
+          );
+          return;
+        }
         setVideo({
           uri: file.uri,
           name: file.name || 'tree_scan.mp4',

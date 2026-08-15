@@ -16,22 +16,18 @@ import DashboardStack from './DashboardStack';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
+const StackNavigator: any = Stack.Navigator;
+const TabNavigator: any = Tab.Navigator;
 
 function AuthStack() {
   return (
-    <Stack.Navigator id={undefined} screenOptions={{ headerShown: false }}>
+    <StackNavigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
-    </Stack.Navigator>
+    </StackNavigator>
   );
 }
 
-/**
- * The web app only requires login for Plots/claim features — everything else
- * (scanning, gallery) is fully usable anonymously. This tab mirrors that: it
- * shows sign-in/register when logged out, and a profile screen once signed in,
- * without gating the rest of the app behind it.
- */
 function AccountTab() {
   const { user, isLoading } = useAuth();
 
@@ -48,8 +44,7 @@ function AccountTab() {
 
 function AppTabs() {
   return (
-    <Tab.Navigator
-      id={undefined}
+    <TabNavigator
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: '#10B981',
@@ -105,7 +100,7 @@ function AppTabs() {
           ),
         }}
       />
-    </Tab.Navigator>
+    </TabNavigator>
   );
 }
 
@@ -120,9 +115,6 @@ function NavigationContent() {
     );
   }
 
-  // Always render the full app — scanning and browsing work anonymously,
-  // matching the web app. Only the Account tab and Plots create/claim/edit
-  // actions require being signed in (enforced inside those screens).
   return <AppTabs />;
 }
 

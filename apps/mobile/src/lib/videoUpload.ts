@@ -19,6 +19,7 @@ export interface UploadVideoOptions {
   frames: number;
   blurThresh: number;
   posesPath?: string;
+  treeCode?: string;
 }
 
 /**
@@ -62,5 +63,6 @@ export async function uploadVideoToBackend(
     frames: options.frames,
     blurThresh: options.blurThresh,
     cameraPoses,
+    treeCode: options.treeCode,
   });
 }

@@ -11,7 +11,7 @@ import {
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { API_BASE_URL } from '../lib/config';
-import { Asset } from 'expo-asset';
+// import { Asset } from 'expo-asset';
 
 interface SplatViewerProps {
   treeCode: string;
@@ -95,7 +95,7 @@ export default function SplatViewer({
   // ── Load Point Cloud Asset ──────────────────────────────────────────────
   const loadPcAsset = useCallback(async () => {
     try {
-      const asset = Asset.fromModule(require('../../assets/point-cloud-viewer.html'));
+      const asset = (require('expo-asset') as any).Asset.fromModule(require('../../assets/point-cloud-viewer.html'));
       await asset.downloadAsync();
       const baseUri = asset.localUri || asset.uri;
       const finalUri = `${baseUri}?plyUrl=${encodeURIComponent(points3dUrl || '')}&code=${encodeURIComponent(treeCode)}`;
@@ -304,9 +304,11 @@ export default function SplatViewer({
           {timing.length > 0 && (
             <View style={styles.timingBox}>
               {timing.map(r => (
-                <Text key={r.phase} style={styles.timingRow}>
-                  {r.phase}: {r.ms}ms
-                </Text>
+                <React.Fragment key={r.phase}>
+                  <Text style={styles.timingRow}>
+                    {r.phase}: {r.ms}ms
+                  </Text>
+                </React.Fragment>
               ))}
             </View>
           )}

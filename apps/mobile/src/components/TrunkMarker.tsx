@@ -119,9 +119,11 @@ export default function TrunkMarker({ imageUri, onChange }: TrunkMarkerProps) {
               resizeMode="contain"
             />
             {taps.map((t, i) => (
-              <View key={i} pointerEvents="none" style={[styles.marker, { left: t.x - 12, top: t.y - 12 }]}>
-                <Text style={styles.markerText}>{i === 0 ? 'A' : 'B'}</Text>
-              </View>
+              <React.Fragment key={i}>
+                <View pointerEvents="none" style={[styles.marker, { left: t.x - 12, top: t.y - 12 }]}>
+                  <Text style={styles.markerText}>{i === 0 ? 'A' : 'B'}</Text>
+                </View>
+              </React.Fragment>
             ))}
             {taps.length === 2 && (
               <View

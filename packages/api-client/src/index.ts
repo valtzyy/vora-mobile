@@ -229,8 +229,9 @@ export function createVoraClient(config: VoraClientConfig) {
   // -----------------------------------------------------------------------
 
   const pipeline = {
-    async getStatus(): Promise<PipelineStatus> {
-      return apiFetch("GET", "/status");
+    async getStatus(treeCode?: string): Promise<PipelineStatus> {
+      const endpoint = treeCode ? `/status/${treeCode}` : "/status";
+      return apiFetch("GET", endpoint);
     },
 
     /**
@@ -256,6 +257,7 @@ export function createVoraClient(config: VoraClientConfig) {
       frames?: number;
       blurThresh?: number;
       cameraPoses?: any[];
+      treeCode?: string;
     }): Promise<UploadResponse> {
       return apiFetch("POST", "/upload_video", {
         body: {
@@ -263,6 +265,7 @@ export function createVoraClient(config: VoraClientConfig) {
           frames: options.frames,
           blur_thresh: options.blurThresh,
           camera_poses: options.cameraPoses,
+          tree_code: options.treeCode,
         },
       });
     },
@@ -459,6 +462,7 @@ export async function uploadFileToR2(
 // ---------------------------------------------------------------------------
 
 export interface PollOptions {
+  treeCode?: string;
   intervalMs?: number;
   maxAttempts?: number;
   /** Henti jika callback return true */
@@ -502,7 +506,7 @@ export async function pollPipelineStatus(
       attempts++;
 
       try {
-        const status = await client.pipeline.getStatus();
+        const status = await client.pipeline.getStatus(options.treeCode);
         onUpdate?.(status);
 
         if (stopCondition(status)) {

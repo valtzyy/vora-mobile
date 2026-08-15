@@ -67,14 +67,15 @@ export default function PlotGrid({ scans, onPositionsChange, onSelectTree }: Plo
             {scans.map((scan) => {
               const pos = positionsRef.current.get(scan.tree_code)!;
               return (
-                <TreeChip
-                  key={scan.tree_code}
-                  treeCode={scan.tree_code}
-                  initialX={pos.x}
-                  initialY={pos.y}
-                  onDragEnd={handleDragEnd}
-                  onPress={onSelectTree}
-                />
+                <React.Fragment key={scan.tree_code}>
+                  <TreeChip
+                    treeCode={scan.tree_code}
+                    initialX={pos.x}
+                    initialY={pos.y}
+                    onDragEnd={handleDragEnd}
+                    onPress={onSelectTree}
+                  />
+                </React.Fragment>
               );
             })}
           </View>
