@@ -47,6 +47,7 @@ export default function ScanCaptureScreen() {
   const [stage, setStage] = useState<Stage>('form');
   const [isRecording, setIsRecording] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ loaded: number; total: number } | null>(null);
 
   // ARCore VIO state & refs
   const [arSupported, setArSupported] = useState(false);
@@ -174,13 +175,16 @@ export default function ScanCaptureScreen() {
     }
 
     setErrorMessage(null);
+    setUploadProgress(null);
     setStage('uploading');
     try {
       await uploadVideoToBackend(video, {
         frames,
         blurThresh,
         posesPath: posesPath || undefined,
+        onProgress: (loaded, total) => setUploadProgress({ loaded, total }),
       });
+      setUploadProgress(null);
 
       setStage('extracting');
       const status = await pollPipelineStatus(client, {
@@ -201,6 +205,7 @@ export default function ScanCaptureScreen() {
     } catch (err) {
       console.error('Scan start error:', err);
       setStage('form');
+      setUploadProgress(null);
       setErrorMessage((err as Error)?.message || 'Something went wrong while starting the scan.');
     }
   };
@@ -372,6 +377,23 @@ export default function ScanCaptureScreen() {
             variant="primary"
             className="mt-4"
           />
+
+          {/* Upload progress bar */}
+          {stage === 'uploading' && uploadProgress && uploadProgress.total > 0 && (
+            <View className="mt-3">
+              <View className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                <View
+                  className="h-full bg-vora-green rounded-full"
+                  style={{
+                    width: `${Math.min(100, Math.round((uploadProgress.loaded / uploadProgress.total) * 100))}%`,
+                  }}
+                />
+              </View>
+              <Text className="text-[10px] font-sansMedium text-slate-400 mt-1 text-right">
+                {Math.min(100, Math.round((uploadProgress.loaded / uploadProgress.total) * 100))}%
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Error box */}

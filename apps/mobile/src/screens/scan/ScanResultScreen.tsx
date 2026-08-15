@@ -10,6 +10,7 @@ import {
   Image,
   Alert,
   Linking,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, type RouteProp } from '@react-navigation/native';
@@ -35,7 +36,7 @@ import {
 import type { ScanStackParamList } from '../../navigation/types';
 import { client } from '../../lib/voraClient';
 import { useAuth } from '../../lib/AuthContext';
-import { API_BASE_URL } from '../../lib/config';
+import { API_BASE_URL, WEB_FRONTEND_URL } from '../../lib/config';
 import { downloadAndShare } from '../../lib/fileShare';
 import SplatViewer, { derivePoints3dUrl } from '../../components/SplatViewer';
 import RecalibrateModal from '../../components/RecalibrateModal';
@@ -58,6 +59,16 @@ export default function ScanResultScreen() {
   const handleCertificatePress = () => {
     if (!scan) return;
     navigation.navigate('CertificateViewer', { treeCode: scan.tree_code });
+  };
+
+  const handleShare = async () => {
+    if (!scan) return;
+    const url = `${WEB_FRONTEND_URL}/reconstruct?code=${encodeURIComponent(scan.tree_code)}&phase=result`;
+    try {
+      await Share.share({ message: url, url });
+    } catch (err) {
+      Alert.alert('Error', (err as Error)?.message || 'Failed to share this scan.');
+    }
   };
 
   const { data: history, isLoading, isError, error, refetch, isRefetching } = useQuery({
@@ -306,6 +317,11 @@ export default function ScanResultScreen() {
               title="View Carbon Certificate"
               variant="primary"
               onPress={handleCertificatePress}
+            />
+            <VoraButton
+              title="Share"
+              variant="outline"
+              onPress={handleShare}
             />
           </View>
         </View>

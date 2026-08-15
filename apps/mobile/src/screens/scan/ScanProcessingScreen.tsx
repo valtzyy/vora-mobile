@@ -9,6 +9,7 @@ import type { PipelineStatus } from '@vora/types';
 import type { ScanStackParamList } from '../../navigation/types';
 import { client } from '../../lib/voraClient';
 import { API_BASE_URL } from '../../lib/config';
+import { notifyScanComplete } from '../../lib/notifications';
 
 type Nav = NativeStackNavigationProp<ScanStackParamList, 'ScanProcessing'>;
 type Route = RouteProp<ScanStackParamList, 'ScanProcessing'>;
@@ -48,6 +49,7 @@ export default function ScanProcessingScreen() {
 
         await fetchHistoryWithRetry(client, treeCode);
         if (!cancelledRef.current) {
+          notifyScanComplete(treeCode);
           navigation.replace('ScanResult', { treeCode });
         }
       } catch (err) {
