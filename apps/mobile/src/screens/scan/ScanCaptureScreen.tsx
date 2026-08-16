@@ -9,6 +9,7 @@ import {
   TextInput,
   Switch,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
@@ -352,6 +353,23 @@ export default function ScanCaptureScreen() {
                 </TouchableOpacity>
               </View>
             )}
+          </View>
+
+          {/* Platform Sensor & Scale Indicator Badge */}
+          <View className={`rounded-2xl p-3.5 mb-5 border ${arSupported ? 'bg-indigo-50/70 border-indigo-100' : 'bg-slate-50 border-slate-200/80'}`}>
+            <View className="flex-row items-center mb-1">
+              <Text className="text-xs mr-1.5">{arSupported ? '📐' : 'ℹ️'}</Text>
+              <Text className={`text-[11px] font-sansBold ${arSupported ? 'text-indigo-900' : 'text-slate-700'}`}>
+                {arSupported ? 'ARCore VIO Metric Tracking Active' : 'MASt3R Geometric Scale Mode'}
+              </Text>
+            </View>
+            <Text className={`text-[10px] leading-relaxed ${arSupported ? 'text-indigo-700/90' : 'text-slate-500'}`}>
+              {arSupported 
+                ? 'Kamera dan IMU hardware Android disinkronisasi untuk kalibrasi skala metrik absolut.'
+                : Platform.OS === 'ios'
+                  ? 'Kalibrasi presisi VIO sensor tersedia di Android. Di iOS, pemindaian berjalan penuh dengan model metrik standar MASt3R.'
+                  : 'Pemindaian berjalan dengan model metrik standar MASt3R tanpa kalibrasi VIO sensor.'}
+            </Text>
           </View>
 
           {/* Steppers */}
