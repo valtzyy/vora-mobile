@@ -63,12 +63,12 @@ export function stopCapture(posesPath: string): PoseStats {
   }
 }
 
-export function isSupported(): boolean {
+export async function isSupported(): Promise<boolean> {
   if (Platform.OS !== 'android' || !VoraAr) {
     return false;
   }
   try {
-    return !!VoraAr.isSupported();
+    return !!(await VoraAr.isSupported());
   } catch {
     return false;
   }

@@ -1,8 +1,11 @@
 package com.vora.ar
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import com.google.ar.core.*
 import com.google.ar.core.exceptions.*
+import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import org.json.JSONArray
@@ -101,6 +104,7 @@ class VoraArModule : Module() {
                 put("ts", System.currentTimeMillis())
             }
             poseLog.add(poseEntry)
+            Unit
         }
 
         // ── stopCapture ─────────────────────────────────────────────────────
@@ -139,14 +143,37 @@ class VoraArModule : Module() {
         // ── isSupported ─────────────────────────────────────────────────────
         // Only SUPPORTED_INSTALLED means an AR session can actually be opened
         // right now. Every other "supported" state (SUPPORTED_NOT_INSTALLED,
-        // SUPPORTED_APK_TOO_OLD, UNKNOWN_CHECKING/TIMED_OUT/ERROR) means
-        // Session(ctx) in startCapture() would throw immediately — reporting
-        // those as "supported" showed the AR VIO badge for a feature that was
-        // about to silently fail with no user-visible error.
-        Function("isSupported") {
-            val ctx: Context = appContext.reactContext ?: return@Function false
-            val avail = ArCoreApk.getInstance().checkAvailability(ctx)
-            avail == ArCoreApk.Availability.SUPPORTED_INSTALLED
+        // SUPPORTED_APK_TOO_OLD, UNKNOWN_TIMED_OUT/ERROR) means Session(ctx)
+        // in startCapture() would throw immediately — reporting those as
+        // "supported" showed the AR VIO badge for a feature that was about
+        // to silently fail with no user-visible error.
+        //
+        // checkAvailability() is a snapshot, not a definitive answer: on a
+        // device ARCore hasn't checked before, the *first* call routinely
+        // returns UNKNOWN_CHECKING while it queries Play Services in the
+        // background, and only settles on a real answer a few hundred ms
+        // later. Calling it once, synchronously, on screen mount caught
+        // that transient state and reported a perfectly capable device as
+        // unsupported. This is async and polls the same synchronous check
+        // for up to ~2s until it resolves past UNKNOWN_CHECKING.
+        AsyncFunction("isSupported") { promise: Promise ->
+            val ctx: Context? = appContext.reactContext
+            if (ctx == null) {
+                promise.resolve(false)
+            } else {
+                pollArCoreAvailability(ctx, promise, attemptsLeft = 10)
+            }
+        }
+    }
+
+    private fun pollArCoreAvailability(ctx: Context, promise: Promise, attemptsLeft: Int) {
+        val avail = ArCoreApk.getInstance().checkAvailability(ctx)
+        if (avail == ArCoreApk.Availability.UNKNOWN_CHECKING && attemptsLeft > 0) {
+            Handler(Looper.getMainLooper()).postDelayed({
+                pollArCoreAvailability(ctx, promise, attemptsLeft - 1)
+            }, 200)
+        } else {
+            promise.resolve(avail == ArCoreApk.Availability.SUPPORTED_INSTALLED)
         }
     }
 }

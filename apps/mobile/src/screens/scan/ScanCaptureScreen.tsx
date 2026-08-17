@@ -56,17 +56,30 @@ export default function ScanCaptureScreen() {
   const poseIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   React.useEffect(() => {
-    try {
-      const voraAr = require('vora-ar');
-      if (typeof voraAr.isSupported === 'function') {
-        const supported = voraAr.isSupported();
-        setArSupported(supported);
-        console.log(`[ScanCaptureScreen] ARCore VIO support detected: ${supported}`);
+    let cancelled = false;
+    // isSupported() is async on the native side — it polls ARCore's
+    // availability check for up to ~2s, since the first-ever check on a
+    // device routinely comes back "still checking" before settling on a
+    // real answer. A synchronous read here would race that and report a
+    // capable device as unsupported.
+    (async () => {
+      try {
+        const voraAr = require('vora-ar');
+        if (typeof voraAr.isSupported === 'function') {
+          const supported = await voraAr.isSupported();
+          if (cancelled) return;
+          setArSupported(supported);
+          console.log(`[ScanCaptureScreen] ARCore VIO support detected: ${supported}`);
+        }
+      } catch (e) {
+        if (cancelled) return;
+        console.log('[ScanCaptureScreen] VoraAr native module not available or not supported on this device/platform.');
+        setArSupported(false);
       }
-    } catch (e) {
-      console.log('[ScanCaptureScreen] VoraAr native module not available or not supported on this device/platform.');
-      setArSupported(false);
-    }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const pickVideoFile = async () => {
