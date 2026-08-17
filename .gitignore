@@ -6,5 +6,5 @@ build/
 .env
 .env.local
 .env.*.local
-android/
-ios/
+apps/*/android/
+apps/*/ios/
