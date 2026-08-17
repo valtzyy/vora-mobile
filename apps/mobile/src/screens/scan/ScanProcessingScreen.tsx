@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useQueryClient } from '@tanstack/react-query';
 import { pollPipelineStatus, fetchHistoryWithRetry } from '@vora/api-client';
 import { getPipelineStageInfo } from '@vora/domain';
 import type { PipelineStatus } from '@vora/types';
@@ -30,6 +31,7 @@ const MAX_TIMEOUT_SEC = 210;
 export default function ScanProcessingScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
+  const queryClient = useQueryClient();
   const { treeCode } = route.params;
 
   const [status, setStatus] = useState<PipelineStatus | null>(null);
@@ -62,6 +64,10 @@ export default function ScanProcessingScreen() {
 
         await fetchHistoryWithRetry(client, treeCode);
         if (!cancelledRef.current) {
+          // New scan is now saved server-side — Dashboard/Gallery lists are
+          // cached, so mark them stale now instead of waiting for the next
+          // focus event to catch up.
+          queryClient.invalidateQueries({ queryKey: ['scans'] });
           notifyScanComplete(treeCode);
           navigation.replace('ScanResult', { treeCode });
         }

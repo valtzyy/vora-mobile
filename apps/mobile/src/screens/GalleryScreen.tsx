@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { formatCO2eCompact, getDisplaySpecies, isScanValid } from '@vora/domain';
 import type { Plot } from '@vora/types';
 import { client } from '../lib/voraClient';
@@ -44,6 +44,15 @@ export default function GalleryScreen() {
   const handleRefresh = () => {
     activeQuery.refetch();
   };
+
+  // Same fix as DashboardScreen: this tab stays mounted across tab switches,
+  // so refetch on focus instead of relying on a remount to pick up new scans.
+  useFocusEffect(
+    useCallback(() => {
+      activeQuery.refetch();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [tab])
+  );
 
   const isBusy = activeQuery.isLoading;
 
