@@ -9,6 +9,7 @@ import {
   GestureResponderEvent,
   ActivityIndicator,
 } from 'react-native';
+import { useSettings } from '../lib/i18n';
 
 export interface TrunkMarkerPoints {
   p1: [number, number];
@@ -38,6 +39,7 @@ const MAX_DISPLAY_HEIGHT = 420;
  * recalibration (RecalibrateModal).
  */
 export default function TrunkMarker({ imageUri, onChange }: TrunkMarkerProps) {
+  const { t } = useSettings();
   const [naturalSize, setNaturalSize] = useState<{ width: number; height: number } | null>(null);
   const [displaySize, setDisplaySize] = useState<{ width: number; height: number } | null>(null);
   const [taps, setTaps] = useState<{ x: number; y: number }[]>([]);
@@ -95,7 +97,7 @@ export default function TrunkMarker({ imageUri, onChange }: TrunkMarkerProps) {
   if (loadError) {
     return (
       <View style={styles.loadingBox}>
-        <Text style={styles.errorText}>Could not load the reference frame.</Text>
+        <Text style={styles.errorText}>{t('trunk.loadError')}</Text>
       </View>
     );
   }
@@ -103,7 +105,7 @@ export default function TrunkMarker({ imageUri, onChange }: TrunkMarkerProps) {
   if (!naturalSize) {
     return (
       <View style={styles.loadingBox}>
-        <ActivityIndicator color="#16a34a" />
+        <ActivityIndicator color="#616c39" />
       </View>
     );
   }
@@ -154,7 +156,7 @@ export default function TrunkMarker({ imageUri, onChange }: TrunkMarkerProps) {
         </Text>
         {taps.length > 0 && (
           <Pressable onPress={reset} hitSlop={8}>
-            <Text style={styles.resetText}>Reset</Text>
+            <Text style={styles.resetText}>{t('trunk.reset')}</Text>
           </Pressable>
         )}
       </View>
@@ -167,16 +169,16 @@ const styles = StyleSheet.create({
     height: 240,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f3f4f6',
+    backgroundColor: '#f5f5f4',
     borderRadius: 12,
   },
   errorText: {
-    color: '#991b1b',
+    color: '#763524',
     fontSize: 13,
   },
   imageWrap: {
     alignItems: 'center',
-    backgroundColor: '#111827',
+    backgroundColor: '#1c1917',
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -185,7 +187,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#16a34a',
+    backgroundColor: '#616c39',
     borderWidth: 2,
     borderColor: '#ffffff',
     justifyContent: 'center',
@@ -199,7 +201,7 @@ const styles = StyleSheet.create({
   axisLine: {
     position: 'absolute',
     height: 2,
-    backgroundColor: '#16a34a',
+    backgroundColor: '#616c39',
     transformOrigin: '0 50%',
   },
   hintRow: {
@@ -210,12 +212,12 @@ const styles = StyleSheet.create({
   },
   hintText: {
     fontSize: 13,
-    color: '#4b5563',
+    color: '#57534e',
     flex: 1,
   },
   resetText: {
     fontSize: 13,
-    color: '#dc2626',
+    color: '#c25f3f',
     fontWeight: '600',
   },
 });

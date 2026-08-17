@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useSettings } from '../../lib/i18n';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import type { ScanRecord } from '@vora/types';
 import { hasScanGPS, formatCO2eCompact } from '@vora/domain';
@@ -20,6 +21,7 @@ interface PlotMapViewProps {
  * screen requires a custom dev client / EAS build to actually render.
  */
 export default function PlotMapView({ scans, centroidLat, centroidLon, height = 280 }: PlotMapViewProps) {
+  const { t } = useSettings();
   const geoScans = useMemo(() => scans.filter(hasScanGPS), [scans]);
 
   const initialRegion = useMemo(() => {
@@ -40,7 +42,7 @@ export default function PlotMapView({ scans, centroidLat, centroidLon, height = 
   if (!initialRegion) {
     return (
       <View style={[styles.emptyBox, { height }]}>
-        <Text style={styles.emptyText}>No GPS data available for this plot yet.</Text>
+        <Text style={styles.emptyText}>{t('plot.noGps')}</Text>
       </View>
     );
   }
@@ -73,10 +75,10 @@ const styles = StyleSheet.create({
   emptyBox: {
     width: '100%',
     borderRadius: 12,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: '#f5f5f4',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
   },
-  emptyText: { fontSize: 13, color: '#9ca3af', textAlign: 'center' },
+  emptyText: { fontSize: 13, color: '#a8a29e', textAlign: 'center' },
 });

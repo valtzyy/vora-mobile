@@ -42,6 +42,7 @@ import SplatViewer, { derivePoints3dUrl } from '../../components/SplatViewer';
 import RecalibrateModal from '../../components/RecalibrateModal';
 import ClaimToPlotModal from '../../components/plots/ClaimToPlotModal';
 import VoraButton from '../../components/VoraButton';
+import { useSettings } from '../../lib/i18n';
 
 type Nav = NativeStackNavigationProp<ScanStackParamList, 'ScanResult'>;
 type Route = RouteProp<ScanStackParamList, 'ScanResult'>;
@@ -51,6 +52,7 @@ export default function ScanResultScreen() {
   const route = useRoute<Route>();
   const { treeCode } = route.params;
   const { user, token } = useAuth();
+  const { t } = useSettings();
   const [selectedScanId, setSelectedScanId] = useState<number | null>(null);
   const [recalibrateOpen, setRecalibrateOpen] = useState(false);
   const [claimOpen, setClaimOpen] = useState(false);
@@ -67,7 +69,7 @@ export default function ScanResultScreen() {
     try {
       await Share.share({ message: url, url });
     } catch (err) {
-      Alert.alert('Error', (err as Error)?.message || 'Failed to share this scan.');
+      Alert.alert(t('auth.error'), (err as Error)?.message || t('result.shareFailed'));
     }
   };
 
@@ -84,8 +86,8 @@ export default function ScanResultScreen() {
     return (
       <SafeAreaView className="flex-1 justify-center items-center p-6 bg-white">
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-        <ActivityIndicator size="large" color="#10b981" />
-        <Text className="mt-4 text-sm font-sansBold text-slate-700 font-bold">Loading Scan Result...</Text>
+        <ActivityIndicator size="large" color="#616c39" />
+        <Text className="mt-4 text-sm font-sansBold text-slate-700 font-bold">{t('result.loading')}</Text>
       </SafeAreaView>
     );
   }
@@ -94,11 +96,11 @@ export default function ScanResultScreen() {
     return (
       <SafeAreaView className="flex-1 justify-center items-center p-6 bg-white">
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-        <Text className="text-xl font-sansBold text-red-650 mb-2 font-bold">Could Not Load Result</Text>
+        <Text className="text-xl font-sansBold text-red-650 mb-2 font-bold">{t('result.couldNotLoad')}</Text>
         <Text className="text-sm font-sans text-slate-500 text-center mb-6 px-4">
-          {(error as Error)?.message || `No scan data found for ${treeCode}.`}
+          {(error as Error)?.message || `${t('result.noData')} ${treeCode}.`}
         </Text>
-        <VoraButton title="Retry" onPress={() => refetch()} variant="primary" className="w-full max-w-[200px]" />
+        <VoraButton title={t('plot.retry')} onPress={() => refetch()} variant="primary" className="w-full max-w-[200px]" />
       </SafeAreaView>
     );
   }
@@ -121,14 +123,14 @@ export default function ScanResultScreen() {
         className="flex-1 bg-slate-50/60"
         contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#10b981" colors={['#10b981']} />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#616c39" colors={['#616c39']} />}
       >
         {/* Hero Header */}
         <View className="bg-white border-b border-slate-200/50 px-6 pt-6 pb-8">
           <View className="flex-row items-center mb-3">
             <View className="bg-emerald-50 border border-emerald-100 rounded-full px-2.5 py-0.5 flex-row items-center gap-1">
-              <Ionicons name="checkmark-circle" size={12} color="#065f46" />
-              <Text className="text-[10px] font-sansBold text-emerald-800 font-bold">3D Scan Complete</Text>
+              <Ionicons name="checkmark-circle" size={12} color="#4e572c" />
+              <Text className="text-[10px] font-sansBold text-emerald-800 font-bold">{t('result.complete')}</Text>
             </View>
           </View>
           <Text className="text-3xl font-serif text-slate-900 mb-1">{scan.tree_code}</Text>
@@ -159,7 +161,7 @@ export default function ScanResultScreen() {
 
           {/* Carbon card */}
           <View className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm mb-4">
-            <Text className="text-[10px] font-sansBold text-slate-400 uppercase tracking-widest mb-1.5 font-bold">Estimated Carbon Stored</Text>
+            <Text className="text-[10px] font-sansBold text-slate-400 uppercase tracking-widest mb-1.5 font-bold">{t('result.estimatedCarbon')}</Text>
             <Text className="text-4xl font-serif text-vora-dark mb-1">{formatCO2e(scan.co2e_kg)}</Text>
             <Text className="text-xs font-sansMedium text-slate-500">
               {formatCO2eRange(scan.co2e_low_kg, scan.co2e_high_kg, scan.co2e_uncertainty_pct)}
@@ -180,24 +182,24 @@ export default function ScanResultScreen() {
           )}
 
           {/* Metrics grid */}
-          <Text className="text-lg font-serif text-slate-900 mb-3 mt-2">Tree Allometrics</Text>
+          <Text className="text-lg font-serif text-slate-900 mb-3 mt-2">{t('result.allometrics')}</Text>
           <View className="flex-row flex-wrap gap-3 mb-5">
-            <MetricBox label="DBH (Trunk Diameter)" value={formatDBH(scan.dbh_cm)} />
-            <MetricBox label={`Height (${heightInfo.label})`} value={formatHeight(scan.tinggi_m)} />
-            <MetricBox label="Above-Ground Biomass" value={formatBiomass(scan.agb_kg)} />
-            <MetricBox label="Below-Ground Biomass" value={formatBiomass(scan.bgb_kg)} />
+            <MetricBox label={t('result.dbh')} value={formatDBH(scan.dbh_cm)} />
+            <MetricBox label={`${t('result.height')} (${heightInfo.label})`} value={formatHeight(scan.tinggi_m)} />
+            <MetricBox label={t('result.agb')} value={formatBiomass(scan.agb_kg)} />
+            <MetricBox label={t('result.bgb')} value={formatBiomass(scan.bgb_kg)} />
           </View>
 
           {/* Species */}
           <View className="bg-emerald-50 border border-emerald-100/60 rounded-2xl p-4 mb-5">
             <View className="flex-row justify-between items-center mb-2">
               <View className="flex-row items-center gap-1">
-                <Ionicons name="leaf-outline" size={12} color="#065f46" />
-                <Text className="text-[10px] font-sansBold text-emerald-800 uppercase tracking-wider font-bold">Species Identification</Text>
+                <Ionicons name="leaf-outline" size={12} color="#4e572c" />
+                <Text className="text-[10px] font-sansBold text-emerald-800 uppercase tracking-wider font-bold">{t('result.speciesId')}</Text>
               </View>
               {species.confidence != null && (
                 <View className="bg-emerald-100/80 px-2 py-0.5 rounded">
-                  <Text className="text-[10px] font-sansBold text-emerald-850 font-bold">{formatConfidence(species.confidence)} match</Text>
+                  <Text className="text-[10px] font-sansBold text-emerald-850 font-bold">{formatConfidence(species.confidence)} {t('result.match')}</Text>
                 </View>
               )}
             </View>
@@ -206,7 +208,7 @@ export default function ScanResultScreen() {
             {species.allPredictions && species.allPredictions.length > 0 && (
               <View className="mt-2 pt-2 border-t border-emerald-100/40">
                 <Text className="text-[9px] font-sansBold text-emerald-800 uppercase tracking-wider mb-2 font-bold">
-                  All Predictions
+                  {t('result.allPredictions')}
                 </Text>
                 <View className="gap-2">
                   {species.allPredictions.map((pred, idx) => (
@@ -243,18 +245,18 @@ export default function ScanResultScreen() {
 
           {/* How calculated */}
           <View className="bg-white border border-slate-200 rounded-2xl p-4 mb-5">
-            <Text className="text-xs font-sansBold text-slate-900 mb-3 uppercase tracking-wide font-bold">How This Was Calculated</Text>
-            <CalcRow label="Wood density" value={`${formatWoodDensity(scan.wood_density_used)} (${scan.wood_density_source || 'n/a'})`} />
-            <CalcRow label="Climate zone" value={scan.climate_zone_detected || 'Unknown'} />
-            <CalcRow label="Formula used" value={scan.formula_used || 'n/a'} />
-            <CalcRow label="Root-to-shoot ratio" value={scan.root_to_shoot_ratio != null ? scan.root_to_shoot_ratio.toFixed(2) : 'n/a'} />
-            {hasScanGPS(scan) && <CalcRow label="GPS" value={formatGPS(scan.gps_lat, scan.gps_lon)} />}
+            <Text className="text-xs font-sansBold text-slate-900 mb-3 uppercase tracking-wide font-bold">{t('result.howCalculated')}</Text>
+            <CalcRow label={t('result.woodDensity')} value={`${formatWoodDensity(scan.wood_density_used)} (${scan.wood_density_source || 'n/a'})`} />
+            <CalcRow label={t('result.climateZone')} value={scan.climate_zone_detected || t('result.unknown')} />
+            <CalcRow label={t('result.formulaUsed')} value={scan.formula_used || 'n/a'} />
+            <CalcRow label={t('result.rootShoot')} value={scan.root_to_shoot_ratio != null ? scan.root_to_shoot_ratio.toFixed(2) : 'n/a'} />
+            {hasScanGPS(scan) && <CalcRow label={t('result.gpsLabel', 'GPS')} value={formatGPS(scan.gps_lat, scan.gps_lon)} />}
           </View>
 
           {/* Recalibrate */}
           {scan.thumbnail_url && (
             <VoraButton
-              title="Recalibrate Trunk (2D Photo)"
+              title={t('result.recalibrate')}
               variant="secondary"
               onPress={() => setRecalibrateOpen(true)}
               className="mb-4"
@@ -265,8 +267,8 @@ export default function ScanResultScreen() {
           {warnings.length > 0 && (
             <View className="bg-red-50 border border-red-100 rounded-2xl p-4 mb-5">
               <View className="flex-row items-center gap-1 mb-2">
-                <Ionicons name="alert-circle-outline" size={14} color="#991b1b" />
-                <Text className="text-xs font-sansBold text-red-800 font-bold">Things to Know About This Estimate</Text>
+                <Ionicons name="alert-circle-outline" size={14} color="#763524" />
+                <Text className="text-xs font-sansBold text-red-800 font-bold">{t('result.thingsToKnow')}</Text>
               </View>
               {warnings.map((w, i) => (
                 <React.Fragment key={i}>
@@ -281,7 +283,7 @@ export default function ScanResultScreen() {
           {/* Scan History */}
           {scans.length > 1 && (
             <View className="bg-white border border-slate-200 rounded-2xl p-4 mb-5">
-              <Text className="text-xs font-sansBold text-slate-900 mb-3 uppercase tracking-wide font-bold">Scan History</Text>
+              <Text className="text-xs font-sansBold text-slate-900 mb-3 uppercase tracking-wide font-bold">{t('result.scanHistory')}</Text>
               <View className="gap-2">
                 {scans.map((s) => (
                   <TouchableOpacity
@@ -292,7 +294,7 @@ export default function ScanResultScreen() {
                     <Text className="text-xs font-sans text-slate-600">
                       {new Date(s.scan_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                     </Text>
-                    <Text className={`text-xs font-sansBold font-bold ${s.id === scan.id ? 'text-[#191919]' : 'text-slate-400'}`}>
+                    <Text className={`text-xs font-sansBold font-bold ${s.id === scan.id ? 'text-[#292524]' : 'text-slate-400'}`}>
                       {formatCO2e(s.co2e_kg, 0)}
                     </Text>
                   </TouchableOpacity>
@@ -311,7 +313,7 @@ export default function ScanResultScreen() {
               by a DIFFERENT user, since claim-scan would just 409. */}
           {user && !scan.plot_id && (!scan.claimed_by_user_id || scan.claimed_by_user_id === user.id) && (
             <VoraButton
-              title="Claim to a Plot"
+              title={t('result.claimToPlot')}
               variant="outline"
               onPress={() => setClaimOpen(true)}
               className="mb-5"
@@ -321,12 +323,12 @@ export default function ScanResultScreen() {
           {/* Actions */}
           <View className="gap-3 mt-2">
             <VoraButton
-              title="View Carbon Certificate"
+              title={t('result.viewCertificate')}
               variant="primary"
               onPress={handleCertificatePress}
             />
             <VoraButton
-              title="Share"
+              title={t('result.share')}
               variant="outline"
               onPress={handleShare}
             />

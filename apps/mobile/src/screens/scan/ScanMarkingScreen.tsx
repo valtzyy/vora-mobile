@@ -7,6 +7,7 @@ import type { ScanStackParamList } from '../../navigation/types';
 import { client } from '../../lib/voraClient';
 import { API_BASE_URL } from '../../lib/config';
 import TrunkMarker, { type TrunkMarkerPoints } from '../../components/TrunkMarker';
+import { useSettings } from '../../lib/i18n';
 
 type Nav = NativeStackNavigationProp<ScanStackParamList, 'ScanMarking'>;
 type Route = RouteProp<ScanStackParamList, 'ScanMarking'>;
@@ -14,6 +15,7 @@ type Route = RouteProp<ScanStackParamList, 'ScanMarking'>;
 export default function ScanMarkingScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
+  const { t } = useSettings();
   const { treeCode: initialTreeCode, removeBackground } = route.params;
 
   const [points, setPoints] = useState<TrunkMarkerPoints | null>(null);
@@ -45,7 +47,7 @@ export default function ScanMarkingScreen() {
       navigation.replace('ScanProcessing', { treeCode: response.tree_code });
     } catch (err) {
       console.error('Start reconstruct error:', err);
-      Alert.alert('Could Not Start Reconstruction', (err as Error)?.message || 'Please try again.');
+      Alert.alert(t('mark.couldNotStart'), (err as Error)?.message || t('common.tryAgain'));
     } finally {
       setIsSubmitting(false);
     }
@@ -56,10 +58,9 @@ export default function ScanMarkingScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.title}>Mark Trunk Axis</Text>
+          <Text style={styles.title}>{t('mark.title')}</Text>
           <Text style={styles.subtitle}>
-            Tap the base of the trunk, then the top of the visible trunk. This calibrates the real-world scale of
-            the 3D reconstruction. You can also skip this and let auto-detection handle it.
+            {t('mark.subtitle')}
           </Text>
         </View>
 
@@ -72,7 +73,7 @@ export default function ScanMarkingScreen() {
           activeOpacity={0.8}
         >
           <Text style={styles.primaryButtonText}>
-            {isSubmitting ? 'Starting...' : 'Use Selected Points'}
+            {isSubmitting ? t('mark.starting') : t('mark.usePoints')}
           </Text>
         </TouchableOpacity>
 
@@ -82,7 +83,7 @@ export default function ScanMarkingScreen() {
           disabled={isSubmitting}
           activeOpacity={0.8}
         >
-          <Text style={styles.secondaryButtonText}>Skip & Auto-Detect</Text>
+          <Text style={styles.secondaryButtonText}>{t('mark.skip')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -93,24 +94,24 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#ffffff' },
   container: { padding: 24, paddingBottom: 40 },
   header: { marginBottom: 20 },
-  title: { fontSize: 26, fontWeight: 'bold', color: '#111827', marginBottom: 8 },
-  subtitle: { fontSize: 14, color: '#6b7280', lineHeight: 20 },
+  title: { fontSize: 26, fontWeight: 'bold', color: '#1c1917', marginBottom: 8 },
+  subtitle: { fontSize: 14, color: '#78716c', lineHeight: 20 },
   primaryButton: {
-    backgroundColor: '#16a34a',
+    backgroundColor: '#616c39',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 24,
   },
-  buttonDisabled: { backgroundColor: '#9ca3af', opacity: 0.7 },
+  buttonDisabled: { backgroundColor: '#a8a29e', opacity: 0.7 },
   primaryButtonText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
   secondaryButton: {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: '#f5f5f4',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 12,
   },
-  secondaryButtonText: { color: '#374151', fontSize: 15, fontWeight: '600' },
+  secondaryButtonText: { color: '#44403c', fontSize: 15, fontWeight: '600' },
 });

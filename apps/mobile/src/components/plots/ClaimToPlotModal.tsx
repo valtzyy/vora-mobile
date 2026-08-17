@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { VoraApiError } from '@vora/api-client';
 import { client } from '../../lib/voraClient';
 import { useAuth } from '../../lib/AuthContext';
+import { useSettings } from '../../lib/i18n';
 
 interface ClaimToPlotModalProps {
   visible: boolean;
@@ -16,6 +17,7 @@ interface ClaimToPlotModalProps {
 /** Inverse of ClaimTreeModal: pick one of the user's own plots to claim this scan into. */
 export default function ClaimToPlotModal({ visible, treeCode, onClose, onClaimed }: ClaimToPlotModalProps) {
   const { user } = useAuth();
+  const { t } = useSettings();
   const [claimingId, setClaimingId] = useState<number | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -34,7 +36,7 @@ export default function ClaimToPlotModal({ visible, treeCode, onClose, onClaimed
       onClose();
     } catch (err) {
       const message = err instanceof VoraApiError ? err.detail : (err as Error)?.message;
-      Alert.alert('Could Not Claim Scan', message || 'Please try again.');
+      Alert.alert(t('claim.couldNotClaimScan'), message || t('common.tryAgain'));
     } finally {
       setClaimingId(null);
     }
@@ -44,26 +46,26 @@ export default function ClaimToPlotModal({ visible, treeCode, onClose, onClaimed
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <Text style={styles.title}>Claim to a Plot</Text>
+          <Text style={styles.title}>{t('result.claimToPlot')}</Text>
           <TouchableOpacity onPress={onClose}>
-            <Text style={styles.closeText}>Cancel</Text>
+            <Text style={styles.closeText}>{t('common.cancel')}</Text>
           </TouchableOpacity>
         </View>
 
         {isLoading ? (
           <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color="#16a34a" />
+            <ActivityIndicator size="large" color="#616c39" />
           </View>
         ) : isError ? (
           <View style={styles.centerContainer}>
-            <Text style={styles.emptyText}>Could not load your plots.</Text>
+            <Text style={styles.emptyText}>{t('claim.couldNotLoadPlots')}</Text>
             <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-              <Text style={styles.retryButtonText}>Retry</Text>
+              <Text style={styles.retryButtonText}>{t('plot.retry')}</Text>
             </TouchableOpacity>
           </View>
         ) : plots.length === 0 ? (
           <View style={styles.centerContainer}>
-            <Text style={styles.emptyText}>You don't have any plots yet. Create one from the "My Plots" tab on your Dashboard first.</Text>
+            <Text style={styles.emptyText}>{t('claim.noPlots')}</Text>
           </View>
         ) : (
           <FlatList
@@ -74,9 +76,9 @@ export default function ClaimToPlotModal({ visible, treeCode, onClose, onClaimed
               <TouchableOpacity style={styles.row} onPress={() => handleClaim(item.id)} disabled={claimingId !== null}>
                 <Text style={styles.rowName} numberOfLines={1}>{item.name}</Text>
                 {claimingId === item.id ? (
-                  <ActivityIndicator size="small" color="#16a34a" />
+                  <ActivityIndicator size="small" color="#616c39" />
                 ) : (
-                  <Text style={styles.claimLabel}>Select</Text>
+                  <Text style={styles.claimLabel}>{t('claim.select')}</Text>
                 )}
               </TouchableOpacity>
             )}
@@ -96,13 +98,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: '#e7e5e4',
   },
-  title: { fontSize: 18, fontWeight: '700', color: '#111827' },
-  closeText: { fontSize: 14, fontWeight: '600', color: '#6b7280' },
+  title: { fontSize: 18, fontWeight: '700', color: '#1c1917' },
+  closeText: { fontSize: 14, fontWeight: '600', color: '#78716c' },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
-  emptyText: { fontSize: 14, color: '#6b7280', textAlign: 'center' },
-  retryButton: { marginTop: 16, backgroundColor: '#16a34a', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
+  emptyText: { fontSize: 14, color: '#78716c', textAlign: 'center' },
+  retryButton: { marginTop: 16, backgroundColor: '#616c39', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
   retryButtonText: { color: '#ffffff', fontSize: 13, fontWeight: '700' },
   list: { paddingHorizontal: 20, paddingVertical: 12 },
   row: {
@@ -111,8 +113,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: '#f5f5f4',
   },
-  rowName: { fontSize: 14, fontWeight: '600', color: '#111827', flex: 1, marginRight: 12 },
-  claimLabel: { fontSize: 13, fontWeight: '700', color: '#16a34a' },
+  rowName: { fontSize: 14, fontWeight: '600', color: '#1c1917', flex: 1, marginRight: 12 },
+  claimLabel: { fontSize: 13, fontWeight: '700', color: '#616c39' },
 });

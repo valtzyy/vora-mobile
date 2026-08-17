@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { VoraApiError } from '@vora/api-client';
 import { client } from '../lib/voraClient';
+import { useSettings } from '../lib/i18n';
 import TrunkMarker, { type TrunkMarkerPoints } from './TrunkMarker';
 
 interface RecalibrateModalProps {
@@ -20,6 +21,7 @@ interface RecalibrateModalProps {
  * Trunk (2D Photo)" modal.
  */
 export default function RecalibrateModal({ visible, scanId, imageUri, onClose, onSuccess }: RecalibrateModalProps) {
+  const { t } = useSettings();
   const [points, setPoints] = useState<TrunkMarkerPoints | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -32,7 +34,7 @@ export default function RecalibrateModal({ visible, scanId, imageUri, onClose, o
       onClose();
     } catch (err) {
       const message = err instanceof VoraApiError ? err.detail : (err as Error)?.message;
-      Alert.alert('Recalibration Failed', message || 'Please try again.');
+      Alert.alert(t('recal.failed'), message || t('common.tryAgain'));
     } finally {
       setIsSubmitting(false);
     }
@@ -42,7 +44,7 @@ export default function RecalibrateModal({ visible, scanId, imageUri, onClose, o
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Recalibrate Trunk (2D Photo)</Text>
+          <Text style={styles.title}>{t('recal.title')}</Text>
           <Text style={styles.subtitle}>
             Tap the trunk base then the trunk top on this scan's reference photo to redo the scale
             calibration and recompute DBH, height, and carbon.
@@ -60,12 +62,12 @@ export default function RecalibrateModal({ visible, scanId, imageUri, onClose, o
           {isSubmitting ? (
             <ActivityIndicator color="#ffffff" size="small" />
           ) : (
-            <Text style={styles.primaryButtonText}>Save Recalibration</Text>
+            <Text style={styles.primaryButtonText}>{t('recal.save')}</Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.cancelButton} onPress={onClose} disabled={isSubmitting}>
-          <Text style={styles.cancelButtonText}>Cancel</Text>
+          <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </Modal>
@@ -75,18 +77,18 @@ export default function RecalibrateModal({ visible, scanId, imageUri, onClose, o
 const styles = StyleSheet.create({
   container: { padding: 24, paddingTop: 48, paddingBottom: 40, backgroundColor: '#ffffff', flexGrow: 1 },
   header: { marginBottom: 20 },
-  title: { fontSize: 22, fontWeight: 'bold', color: '#111827', marginBottom: 8 },
-  subtitle: { fontSize: 14, color: '#6b7280', lineHeight: 20 },
+  title: { fontSize: 22, fontWeight: 'bold', color: '#1c1917', marginBottom: 8 },
+  subtitle: { fontSize: 14, color: '#78716c', lineHeight: 20 },
   primaryButton: {
-    backgroundColor: '#16a34a',
+    backgroundColor: '#616c39',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 24,
   },
-  buttonDisabled: { backgroundColor: '#9ca3af', opacity: 0.7 },
+  buttonDisabled: { backgroundColor: '#a8a29e', opacity: 0.7 },
   primaryButtonText: { color: '#ffffff', fontSize: 16, fontWeight: 'bold' },
   cancelButton: { paddingVertical: 14, alignItems: 'center', marginTop: 8 },
-  cancelButtonText: { color: '#6b7280', fontSize: 14, fontWeight: '600' },
+  cancelButtonText: { color: '#78716c', fontSize: 14, fontWeight: '600' },
 });

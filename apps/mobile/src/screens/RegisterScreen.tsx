@@ -5,10 +5,12 @@ import { useAuth } from '../lib/AuthContext';
 import { VoraApiError } from '@vora/api-client';
 import VoraButton from '../components/VoraButton';
 import VoraInput from '../components/VoraInput';
+import { useSettings } from '../lib/i18n';
 
 export default function RegisterScreen() {
   const navigation = useNavigation();
   const { register } = useAuth();
+  const { t } = useSettings();
 
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -18,12 +20,12 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!username || !displayName || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert(t('auth.error'), t('auth.fillAll'));
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert(t('auth.error'), t('auth.passwordMismatch'));
       return;
     }
 
@@ -32,14 +34,14 @@ export default function RegisterScreen() {
       await register(username, password, displayName);
 
       Alert.alert(
-        'Success',
-        'Your account has been created successfully. Please sign in.',
+        t('auth.success'),
+        t('auth.accountCreated'),
         [{ text: 'OK', onPress: () => navigation.navigate('Login' as never) }]
       );
     } catch (error) {
       const message =
         error instanceof VoraApiError ? error.detail : (error as Error)?.message;
-      Alert.alert('Registration Failed', message || 'Could not create account.');
+      Alert.alert(t('auth.registrationFailed'), message || t('auth.couldNotCreate'));
     } finally {
       setIsLoading(false);
     }
@@ -48,36 +50,36 @@ export default function RegisterScreen() {
   return (
     <ScrollView className="flex-1 bg-white">
       <View className="px-6 py-12 mt-4">
-        <Text className="text-4xl font-serif text-vora-dark mb-2">Create Account</Text>
+        <Text className="text-4xl font-serif text-vora-dark mb-2">{t('auth.createAccount')}</Text>
         <Text className="text-[15px] font-sans text-gray-500 mb-8">
-          Join Vora to start measuring tree carbon
+          {t('auth.registerSubtitle')}
         </Text>
 
         <View className="space-y-2 mb-6">
           <VoraInput
-            label="Display Name"
-            placeholder="E.g. John Doe"
+            label={t('auth.displayName')}
+            placeholder={t('auth.displayNamePlaceholder')}
             value={displayName}
             onChangeText={setDisplayName}
           />
           <VoraInput
-            label="Username"
-            placeholder="Choose a unique username"
+            label={t('auth.username')}
+            placeholder={t('auth.usernamePick')}
             value={username}
             onChangeText={setUsername}
             autoCapitalize="none"
             autoCorrect={false}
           />
           <VoraInput
-            label="Password"
-            placeholder="Create a strong password"
+            label={t('auth.password')}
+            placeholder={t('auth.passwordCreate')}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
           />
           <VoraInput
-            label="Confirm Password"
-            placeholder="Repeat your password"
+            label={t('auth.confirmPassword')}
+            placeholder={t('auth.confirmPlaceholder')}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
@@ -85,7 +87,7 @@ export default function RegisterScreen() {
         </View>
 
         <VoraButton
-          title="Sign Up"
+          title={t('auth.signUp')}
           onPress={handleRegister}
           isLoading={isLoading}
           variant="primary"
@@ -93,12 +95,12 @@ export default function RegisterScreen() {
         />
 
         <View className="flex-row justify-center mt-8 mb-10">
-          <Text className="text-gray-500 font-sans">Already have an account? </Text>
+          <Text className="text-gray-500 font-sans">{t('auth.haveAccount')}</Text>
           <Text 
             className="text-vora-green font-sansMedium"
             onPress={() => navigation.navigate('Login' as never)}
           >
-            Sign In
+            {t('common.signIn')}
           </Text>
         </View>
       </View>

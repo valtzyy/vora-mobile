@@ -26,18 +26,20 @@ export default function VoraButton({
   let titleClass = 'font-sansMedium text-[15px] ';
   let loaderColor = '#ffffff';
 
+  // Charcoal-on-white, matching the web app's primary submit button
+  // (bg-[#292524] hover:bg-[#1c1917]) in login/register.
   if (variant === 'primary') {
-    buttonClass += 'bg-[#191919] active:bg-slate-800 ';
+    buttonClass += 'bg-[#292524] active:bg-[#1c1917] ';
     titleClass += 'text-white ';
     loaderColor = '#ffffff';
   } else if (variant === 'secondary') {
-    buttonClass += 'bg-[#F4F3F3] active:bg-[#eaeaea] border border-slate-200/60 ';
-    titleClass += 'text-[#191919] ';
-    loaderColor = '#191919';
+    buttonClass += 'bg-[#f5f5f4] active:bg-[#e7e5e4] border border-slate-200/60 ';
+    titleClass += 'text-[#292524] ';
+    loaderColor = '#292524';
   } else if (variant === 'outline') {
     buttonClass += 'bg-transparent border border-slate-200 active:bg-slate-50 ';
     titleClass += 'text-slate-900 ';
-    loaderColor = '#191919';
+    loaderColor = '#292524';
   }
 
   if (disabled || isLoading) {

@@ -21,6 +21,7 @@ import type { ScanStackParamList } from '../../navigation/types';
 import { client } from '../../lib/voraClient';
 import { API_BASE_URL } from '../../lib/config';
 import { notifyScanComplete } from '../../lib/notifications';
+import { useSettings } from '../../lib/i18n';
 
 type Nav = NativeStackNavigationProp<ScanStackParamList, 'ScanProcessing'>;
 type Route = RouteProp<ScanStackParamList, 'ScanProcessing'>;
@@ -32,6 +33,7 @@ export default function ScanProcessingScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const queryClient = useQueryClient();
+  const { t } = useSettings();
   const { treeCode } = route.params;
 
   const [status, setStatus] = useState<PipelineStatus | null>(null);
@@ -58,7 +60,7 @@ export default function ScanProcessingScreen() {
         if (cancelledRef.current) return;
 
         if (finalStatus.stage === 'error') {
-          setErrorMessage(finalStatus.error || 'Reconstruction failed on the server.');
+          setErrorMessage(finalStatus.error || t('proc.reconstructFailed'));
           return;
         }
 
@@ -73,7 +75,7 @@ export default function ScanProcessingScreen() {
         }
       } catch (err) {
         if (!cancelledRef.current) {
-          setErrorMessage((err as Error)?.message || 'Lost connection while processing the scan.');
+          setErrorMessage((err as Error)?.message || t('proc.lostConnection'));
         }
       }
     })();
@@ -100,12 +102,12 @@ export default function ScanProcessingScreen() {
 
   const handleCancel = () => {
     Alert.alert(
-      'Cancel Reconstruction?',
-      'Are you sure you want to abort this 3D reconstruction scan?',
+      t('proc.cancelTitle'),
+      t('proc.cancelMsg'),
       [
-        { text: 'Keep Scanning', style: 'cancel' },
+        { text: t('proc.keepScanning'), style: 'cancel' },
         {
-          text: 'Cancel Scan',
+          text: t('proc.cancelScan'),
           style: 'destructive',
           onPress: async () => {
             cancelledRef.current = true;
@@ -133,12 +135,12 @@ export default function ScanProcessingScreen() {
       <SafeAreaView style={styles.centerContainer}>
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
         <View style={styles.stateCard}>
-          <View style={[styles.errorIconCircle, { backgroundColor: '#fef3c7' }]}>
+          <View style={[styles.errorIconCircle, { backgroundColor: '#f9edd0' }]}>
             <Text style={styles.errorIconText}>⏱️</Text>
           </View>
-          <Text style={[styles.errorTitle, { color: '#b45309' }]}>Processing Timeout (210s)</Text>
+          <Text style={[styles.errorTitle, { color: '#8a561f' }]}>{t('proc.timeoutTitle')}</Text>
           <Text style={styles.errorSubtitle}>
-            Reconstruction is taking longer than usual (over 3.5 minutes). The cloud GPU may be in a temporary queue delay.
+            {t('proc.timeoutDesc')}
           </Text>
           <View style={{ width: '100%', gap: 12, marginTop: 8 }}>
             <TouchableOpacity
@@ -146,14 +148,14 @@ export default function ScanProcessingScreen() {
               onPress={() => navigation.popToTop()}
               activeOpacity={0.8}
             >
-              <Text style={styles.primaryButtonText}>Retry Scan</Text>
+              <Text style={styles.primaryButtonText}>{t('proc.retryScan')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.secondaryButton, { minHeight: 48 }]}
               onPress={() => navigation.navigate('ScanCapture')}
               activeOpacity={0.8}
             >
-              <Text style={styles.secondaryButtonText}>Return to Dashboard</Text>
+              <Text style={styles.secondaryButtonText}>{t('proc.returnDashboard')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -169,14 +171,14 @@ export default function ScanProcessingScreen() {
           <View style={styles.errorIconCircle}>
             <Text style={styles.errorIconText}>⚠️</Text>
           </View>
-          <Text style={styles.errorTitle}>Processing Failed</Text>
+          <Text style={styles.errorTitle}>{t('proc.failedTitle')}</Text>
           <Text style={styles.errorSubtitle}>{errorMessage}</Text>
           <TouchableOpacity
             style={[styles.primaryButton, { minHeight: 48, width: '100%' }]}
             onPress={() => navigation.popToTop()}
             activeOpacity={0.8}
           >
-            <Text style={styles.primaryButtonText}>Back to Scan Setup</Text>
+            <Text style={styles.primaryButtonText}>{t('proc.backToSetup')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -194,7 +196,7 @@ export default function ScanProcessingScreen() {
           resizeMode="cover"
         />
 
-        <ActivityIndicator size="large" color="#16a34a" style={{ marginTop: 24 }} />
+        <ActivityIndicator size="large" color="#616c39" style={{ marginTop: 24 }} />
         <Text style={styles.stageLabel}>{stageInfo.label}</Text>
         <Text style={styles.stageDescription}>{stageInfo.description}</Text>
 
@@ -202,7 +204,7 @@ export default function ScanProcessingScreen() {
           <View style={[styles.progressFill, { width: `${stageInfo.progressPct}%` }]} />
         </View>
 
-        <Text style={styles.elapsedText}>Elapsed: {mm}:{ss}</Text>
+        <Text style={styles.elapsedText}>{t('proc.elapsed')}: {mm}:{ss}</Text>
 
         <View style={styles.checklistBox}>
           {STAGES.map((s) => {
@@ -223,7 +225,7 @@ export default function ScanProcessingScreen() {
         </View>
 
         <View style={styles.treeCodeBadge}>
-          <Text style={styles.treeCodeLabel}>TREE CODE:</Text>
+          <Text style={styles.treeCodeLabel}>{t('proc.treeCode')}</Text>
           <Text style={styles.treeCodeText}>{treeCode}</Text>
         </View>
 
@@ -233,7 +235,7 @@ export default function ScanProcessingScreen() {
             onPress={handleMinimize}
             activeOpacity={0.8}
           >
-            <Text style={styles.secondaryButtonText}>Run in Background</Text>
+            <Text style={styles.secondaryButtonText}>{t('proc.runBackground')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -241,7 +243,7 @@ export default function ScanProcessingScreen() {
             onPress={handleCancel}
             activeOpacity={0.8}
           >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -252,45 +254,45 @@ export default function ScanProcessingScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#ffffff' },
   scrollContent: { padding: 24, alignItems: 'center' },
-  previewImage: { width: '100%', height: 160, borderRadius: 16, backgroundColor: '#e5e7eb' },
-  stageLabel: { fontSize: 20, fontWeight: 'bold', color: '#111827', marginTop: 16, textAlign: 'center' },
-  stageDescription: { fontSize: 13, color: '#6b7280', marginTop: 4, textAlign: 'center', lineHeight: 18 },
+  previewImage: { width: '100%', height: 160, borderRadius: 16, backgroundColor: '#e7e5e4' },
+  stageLabel: { fontSize: 20, fontWeight: 'bold', color: '#1c1917', marginTop: 16, textAlign: 'center' },
+  stageDescription: { fontSize: 13, color: '#78716c', marginTop: 4, textAlign: 'center', lineHeight: 18 },
   progressTrack: {
     width: '100%',
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: '#e7e5e4',
     marginTop: 20,
     overflow: 'hidden',
   },
-  progressFill: { height: '100%', backgroundColor: '#16a34a', borderRadius: 4 },
-  elapsedText: { fontSize: 12, color: '#9ca3af', marginTop: 8 },
+  progressFill: { height: '100%', backgroundColor: '#616c39', borderRadius: 4 },
+  elapsedText: { fontSize: 12, color: '#a8a29e', marginTop: 8 },
   checklistBox: {
     width: '100%',
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#fafaf9',
     borderRadius: 16,
     padding: 16,
     marginTop: 20,
     gap: 10,
     borderWidth: 1,
-    borderColor: '#f3f4f6',
+    borderColor: '#f5f5f4',
   },
   checklistRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  checklistIcon: { fontSize: 14, color: '#9ca3af', width: 18 },
-  checklistText: { fontSize: 13, color: '#9ca3af' },
-  checklistTextActive: { color: '#166534', fontWeight: '600' },
+  checklistIcon: { fontSize: 14, color: '#a8a29e', width: 18 },
+  checklistText: { fontSize: 13, color: '#a8a29e' },
+  checklistTextActive: { color: '#4e572c', fontWeight: '600' },
   treeCodeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: '#f5f5f4',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
     marginTop: 16,
   },
-  treeCodeLabel: { fontSize: 11, fontWeight: '700', color: '#6b7280' },
-  treeCodeText: { fontSize: 12, color: '#1f2937', fontFamily: 'monospace', fontWeight: '600' },
+  treeCodeLabel: { fontSize: 11, fontWeight: '700', color: '#78716c' },
+  treeCodeText: { fontSize: 12, color: '#292524', fontFamily: 'monospace', fontWeight: '600' },
   actionButtonsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -305,26 +307,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#fee2e2',
-    backgroundColor: '#fef2f2',
+    borderColor: '#fbe3dc',
+    backgroundColor: '#fdf3f0',
   },
-  cancelButtonText: { color: '#dc2626', fontSize: 13, fontWeight: '600' },
+  cancelButtonText: { color: '#c25f3f', fontSize: 13, fontWeight: '600' },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#ffffff' },
   stateCard: { alignItems: 'center', width: '100%', maxWidth: 340 },
   errorIconCircle: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#fef2f2',
+    backgroundColor: '#fdf3f0',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
   errorIconText: { fontSize: 28 },
-  errorTitle: { fontSize: 20, fontWeight: 'bold', color: '#dc2626', marginBottom: 8, textAlign: 'center' },
-  errorSubtitle: { fontSize: 14, color: '#4b5563', textAlign: 'center', marginBottom: 20, lineHeight: 20 },
+  errorTitle: { fontSize: 20, fontWeight: 'bold', color: '#c25f3f', marginBottom: 8, textAlign: 'center' },
+  errorSubtitle: { fontSize: 14, color: '#57534e', textAlign: 'center', marginBottom: 20, lineHeight: 20 },
   primaryButton: {
-    backgroundColor: '#16a34a',
+    backgroundColor: '#616c39',
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -333,14 +335,14 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: { color: '#ffffff', fontSize: 15, fontWeight: 'bold' },
   secondaryButton: {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: '#f5f5f4',
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#e7e5e4',
   },
-  secondaryButtonText: { color: '#374151', fontSize: 13, fontWeight: '600' },
+  secondaryButtonText: { color: '#44403c', fontSize: 13, fontWeight: '600' },
 });

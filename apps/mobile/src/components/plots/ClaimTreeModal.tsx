@@ -6,6 +6,7 @@ import type { ScanRecord } from '@vora/types';
 import { formatDBH, formatCO2eCompact, isScanValid } from '@vora/domain';
 import { VoraApiError } from '@vora/api-client';
 import { client } from '../../lib/voraClient';
+import { useSettings } from '../../lib/i18n';
 
 interface ClaimTreeModalProps {
   visible: boolean;
@@ -19,6 +20,7 @@ interface ClaimTreeModalProps {
  * IS NULL) into this plot — mirrors the web app's "add/claim tree" modal.
  */
 export default function ClaimTreeModal({ visible, plotId, onClose, onClaimed }: ClaimTreeModalProps) {
+  const { t } = useSettings();
   const [claimingCode, setClaimingCode] = useState<string | null>(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -37,7 +39,7 @@ export default function ClaimTreeModal({ visible, plotId, onClose, onClaimed }: 
       onClose();
     } catch (err) {
       const message = err instanceof VoraApiError ? err.detail : (err as Error)?.message;
-      Alert.alert('Could Not Claim Tree', message || 'Please try again.');
+      Alert.alert(t('claim.couldNotClaimTree'), message || t('common.tryAgain'));
     } finally {
       setClaimingCode(null);
     }
@@ -47,26 +49,26 @@ export default function ClaimTreeModal({ visible, plotId, onClose, onClaimed }: 
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <Text style={styles.title}>Add Tree to Plot</Text>
+          <Text style={styles.title}>{t('claim.addTreeToPlot')}</Text>
           <TouchableOpacity onPress={onClose}>
-            <Text style={styles.closeText}>Done</Text>
+            <Text style={styles.closeText}>{t('claim.done')}</Text>
           </TouchableOpacity>
         </View>
 
         {isLoading ? (
           <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color="#16a34a" />
+            <ActivityIndicator size="large" color="#616c39" />
           </View>
         ) : isError ? (
           <View style={styles.centerContainer}>
-            <Text style={styles.emptyText}>Could not load scans.</Text>
+            <Text style={styles.emptyText}>{t('claim.couldNotLoadScans')}</Text>
             <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-              <Text style={styles.retryButtonText}>Retry</Text>
+              <Text style={styles.retryButtonText}>{t('plot.retry')}</Text>
             </TouchableOpacity>
           </View>
         ) : unclaimed.length === 0 ? (
           <View style={styles.centerContainer}>
-            <Text style={styles.emptyText}>No unclaimed scans available right now.</Text>
+            <Text style={styles.emptyText}>{t('claim.noUnclaimed')}</Text>
           </View>
         ) : (
           <FlatList
@@ -86,9 +88,9 @@ export default function ClaimTreeModal({ visible, plotId, onClose, onClaimed }: 
                   </Text>
                 </View>
                 {claimingCode === item.tree_code ? (
-                  <ActivityIndicator size="small" color="#16a34a" />
+                  <ActivityIndicator size="small" color="#616c39" />
                 ) : (
-                  <Text style={styles.claimLabel}>Claim</Text>
+                  <Text style={styles.claimLabel}>{t('claim.claim')}</Text>
                 )}
               </TouchableOpacity>
             )}
@@ -108,13 +110,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: '#e7e5e4',
   },
-  title: { fontSize: 18, fontWeight: '700', color: '#111827' },
-  closeText: { fontSize: 14, fontWeight: '600', color: '#16a34a' },
+  title: { fontSize: 18, fontWeight: '700', color: '#1c1917' },
+  closeText: { fontSize: 14, fontWeight: '600', color: '#616c39' },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
-  emptyText: { fontSize: 14, color: '#6b7280', textAlign: 'center' },
-  retryButton: { marginTop: 16, backgroundColor: '#16a34a', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
+  emptyText: { fontSize: 14, color: '#78716c', textAlign: 'center' },
+  retryButton: { marginTop: 16, backgroundColor: '#616c39', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
   retryButtonText: { color: '#ffffff', fontSize: 13, fontWeight: '700' },
   list: { paddingHorizontal: 20, paddingVertical: 12 },
   row: {
@@ -122,9 +124,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: '#f5f5f4',
   },
-  rowCode: { fontSize: 14, fontWeight: '700', color: '#111827', fontFamily: 'monospace' },
-  rowStats: { fontSize: 12, color: '#6b7280', marginTop: 2 },
-  claimLabel: { fontSize: 13, fontWeight: '700', color: '#16a34a' },
+  rowCode: { fontSize: 14, fontWeight: '700', color: '#1c1917', fontFamily: 'monospace' },
+  rowStats: { fontSize: 12, color: '#78716c', marginTop: 2 },
+  claimLabel: { fontSize: 13, fontWeight: '700', color: '#616c39' },
 });

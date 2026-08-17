@@ -20,7 +20,9 @@ import { pollPipelineStatus } from '@vora/api-client';
 import type { ScanStackParamList } from '../../navigation/types';
 import { client } from '../../lib/voraClient';
 import { uploadVideoToBackend, type VideoSource } from '../../lib/videoUpload';
+import { useSettings } from '../../lib/i18n';
 import VoraButton from '../../components/VoraButton';
+import { VoraCaptureLogo, VoraImportLogo } from '../../components/logos/ScanSourceLogos';
 
 type Nav = NativeStackNavigationProp<ScanStackParamList, 'ScanCapture'>;
 
@@ -36,6 +38,7 @@ const BLUR_STEP = 10;
 export default function ScanCaptureScreen() {
   const navigation = useNavigation<Nav>();
   const cameraRef = useRef<CameraView>(null);
+  const { t } = useSettings();
 
   const [camPermission, requestCamPermission] = useCameraPermissions();
   const [micPermission, requestMicrophonePermission] = useMicrophonePermissions();
@@ -92,8 +95,8 @@ export default function ScanCaptureScreen() {
         const file = result.assets[0];
         if (file.size && file.size > 150 * 1024 * 1024) {
           Alert.alert(
-            'Video File Too Large',
-            `Selected video is ${(file.size / (1024 * 1024)).toFixed(1)} MB. Maximum allowed size is 150MB. Please select a 15–30s video.`
+            t('scan.videoTooLarge'),
+            `${t('scan.videoSelected')} ${(file.size / (1024 * 1024)).toFixed(1)} MB. ${t('scan.videoTooLargeMsg')}`
           );
           return;
         }
@@ -107,7 +110,7 @@ export default function ScanCaptureScreen() {
       }
     } catch (err) {
       console.error('Pick video error:', err);
-      Alert.alert('Error', 'Failed to pick video file from device.');
+      Alert.alert(t('auth.error'), t('scan.pickFailed'));
     }
   };
 
@@ -115,7 +118,7 @@ export default function ScanCaptureScreen() {
     if (!camPermission?.granted) {
       const res = await requestCamPermission();
       if (!res.granted) {
-        Alert.alert('Camera Permission Needed', 'Enable camera access to record a scan video.');
+        Alert.alert(t('scan.cameraPermission'), t('scan.cameraPermissionMsg'));
         return;
       }
     }
@@ -163,7 +166,7 @@ export default function ScanCaptureScreen() {
       }
     } catch (err) {
       console.error('Camera recording error:', err);
-      Alert.alert('Recording Failed', 'Could not record video. Please try again or pick a file instead.');
+      Alert.alert(t('scan.recordFailed'), t('scan.recordFailedMsg'));
     } finally {
       setIsRecording(false);
       setStage('form');
@@ -191,7 +194,7 @@ export default function ScanCaptureScreen() {
 
   const startScan = async () => {
     if (!video) {
-      Alert.alert('No Video Selected', 'Record or choose a tree scan video first.');
+      Alert.alert(t('scan.noVideo'), t('scan.noVideoMsg'));
       return;
     }
 
@@ -245,7 +248,7 @@ export default function ScanCaptureScreen() {
             >
               <Text className="color-white text-base font-bold">✕</Text>
             </TouchableOpacity>
-            <Text className="color-white text-xs flex-1">Walk slowly around the trunk, keep it centered</Text>
+            <Text className="color-white text-xs flex-1">{t('scan.cameraHint')}</Text>
             {arSupported && (
               <View className="flex-row items-center gap-1 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/40">
                 <View className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -282,9 +285,9 @@ export default function ScanCaptureScreen() {
       >
         {/* Header */}
         <View className="mb-6 mt-2">
-          <Text className="font-serif text-3xl text-vora-dark mb-1">New reconstruction</Text>
+          <Text className="font-serif text-3xl text-vora-dark mb-1">{t('scan.title')}</Text>
           <Text className="text-xs text-slate-500 font-sans leading-relaxed">
-            Record or upload a video walkthrough to start the 3D pipeline.
+            {t('scan.subtitle')}
           </Text>
         </View>
 
@@ -294,12 +297,12 @@ export default function ScanCaptureScreen() {
           {/* Tree code input */}
           <View className="flex-col mb-5">
             <Text className="text-[10px] font-sansBold uppercase tracking-wider text-slate-400 mb-1.5">
-              Tree identifier <Text className="normal-case tracking-normal font-normal text-slate-300">(optional)</Text>
+              {t('scan.treeId')} <Text className="normal-case tracking-normal font-normal text-slate-300">{t('scan.optional')}</Text>
             </Text>
             <TextInput
               className="px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-sm font-sansMedium text-slate-900 focus:border-slate-400"
               placeholder="e.g. POHON-0042"
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor="#a8a29e"
               value={treeCode}
               onChangeText={setTreeCode}
               autoCapitalize="characters"
@@ -310,42 +313,46 @@ export default function ScanCaptureScreen() {
           {/* Remove background checkbox-style row */}
           <View className="flex-row items-center justify-between bg-slate-50 border border-slate-200/60 rounded-2xl p-4 mb-5">
             <View className="flex-col flex-1 pr-4">
-              <Text className="text-xs font-sansBold text-vora-dark mb-0.5">Remove Background</Text>
+              <Text className="text-xs font-sansBold text-vora-dark mb-0.5">{t('scan.removeBg')}</Text>
               <Text className="text-[10px] text-slate-400 leading-normal">
-                Isolate the tree and remove background objects for a clean 3D visualization.
+                {t('scan.removeBgDesc')}
               </Text>
             </View>
             <Switch
               value={removeBackground}
               onValueChange={setRemoveBackground}
               disabled={isBusy}
-              trackColor={{ false: '#cbd5e1', true: '#141417' }}
-              thumbColor={removeBackground ? '#ffffff' : '#f4f3f3'}
+              trackColor={{ false: '#d6d3d1', true: '#141417' }}
+              thumbColor={removeBackground ? '#ffffff' : '#f5f5f4'}
             />
           </View>
 
           {/* Video file sources */}
           <View className="flex-col mb-5">
-            <Text className="text-[10px] font-sansBold uppercase tracking-wider text-slate-400 mb-1.5">Video walkthrough</Text>
+            <Text className="text-[10px] font-sansBold uppercase tracking-wider text-slate-400 mb-1.5">{t('scan.videoSource')}</Text>
             
             {!video ? (
               <View className="flex-row gap-3">
-                <TouchableOpacity 
+                <TouchableOpacity
                   className="flex-1 bg-slate-50 border border-slate-200/80 border-dashed rounded-xl p-4 items-center justify-center active:bg-slate-100/50"
                   onPress={openCamera}
                   disabled={isBusy}
                 >
-                  <Text className="text-2xl mb-1">📸</Text>
-                  <Text className="text-[11px] font-sansBold text-slate-700">Record Camera</Text>
+                  <View className="mb-2">
+                    <VoraCaptureLogo size={38} />
+                  </View>
+                  <Text className="text-[11px] font-sansBold text-slate-700">{t('scan.recordCamera')}</Text>
                 </TouchableOpacity>
-                
-                <TouchableOpacity 
+
+                <TouchableOpacity
                   className="flex-1 bg-slate-50 border border-slate-200/80 border-dashed rounded-xl p-4 items-center justify-center active:bg-slate-100/50"
                   onPress={pickVideoFile}
                   disabled={isBusy}
                 >
-                  <Text className="text-2xl mb-1">📁</Text>
-                  <Text className="text-[11px] font-sansBold text-slate-700">Choose File</Text>
+                  <View className="mb-2">
+                    <VoraImportLogo size={38} />
+                  </View>
+                  <Text className="text-[11px] font-sansBold text-slate-700">{t('scan.chooseFile')}</Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -353,7 +360,7 @@ export default function ScanCaptureScreen() {
                 <View className="flex-row items-center flex-1 pr-3">
                   <Text className="text-lg mr-2">🎥</Text>
                   <View className="flex-col flex-1">
-                    <Text className="text-[9px] font-sansBold text-emerald-800 uppercase tracking-wide">Selected Video</Text>
+                    <Text className="text-[9px] font-sansBold text-emerald-800 uppercase tracking-wide">{t('scan.selectedVideo')}</Text>
                     <Text className="text-xs font-sansMedium text-emerald-950" numberOfLines={1}>{video.name}</Text>
                   </View>
                 </View>
@@ -362,7 +369,7 @@ export default function ScanCaptureScreen() {
                   disabled={isBusy}
                   className="p-1 rounded-full bg-emerald-100/50"
                 >
-                  <Text className="text-[11px] font-sansBold text-emerald-850 px-1 font-bold">Clear</Text>
+                  <Text className="text-[11px] font-sansBold text-emerald-850 px-1 font-bold">{t('scan.clear')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -373,7 +380,7 @@ export default function ScanCaptureScreen() {
             <View className="flex-row items-center mb-1">
               <Text className="text-xs mr-1.5">{arSupported ? '📐' : 'ℹ️'}</Text>
               <Text className={`text-[11px] font-sansBold ${arSupported ? 'text-indigo-900' : 'text-slate-700'}`}>
-                {arSupported ? 'ARCore VIO Metric Tracking Active' : 'MASt3R Geometric Scale Mode'}
+                {arSupported ? t('scan.arActive') : t('scan.arInactive')}
               </Text>
             </View>
             <Text className={`text-[10px] leading-relaxed ${arSupported ? 'text-indigo-700/90' : 'text-slate-500'}`}>
@@ -387,7 +394,7 @@ export default function ScanCaptureScreen() {
 
           {/* Steppers */}
           <Stepper
-            label="Frames to extract"
+            label={t('scan.framesToExtract')}
             value={frames}
             min={FRAMES_MIN}
             max={FRAMES_MAX}
@@ -397,7 +404,7 @@ export default function ScanCaptureScreen() {
           />
 
           <Stepper
-            label="Blur filter threshold"
+            label={t('scan.blurThreshold')}
             value={blurThresh}
             min={BLUR_MIN}
             max={BLUR_MAX}
@@ -408,7 +415,7 @@ export default function ScanCaptureScreen() {
 
           {/* Start Scan button */}
           <VoraButton
-            title={isBusy ? (stage === 'uploading' ? 'Uploading Video...' : 'Extracting Frames...') : 'Start Scan'}
+            title={isBusy ? (stage === 'uploading' ? t('scan.uploading') : t('scan.extracting')) : t('scan.start')}
             onPress={startScan}
             isLoading={isBusy}
             disabled={!video || isBusy}
@@ -437,7 +444,7 @@ export default function ScanCaptureScreen() {
         {/* Error box */}
         {errorMessage && (
           <View className="bg-red-50 border border-red-200 rounded-2xl p-4 mt-5 flex-col">
-            <Text className="text-xs font-sansBold text-red-800 mb-0.5 font-bold">⚠️ Scan Failed</Text>
+            <Text className="text-xs font-sansBold text-red-800 mb-0.5 font-bold">⚠️ {t('scan.failed')}</Text>
             <Text className="text-xs font-sans text-red-750 leading-relaxed">{errorMessage}</Text>
           </View>
         )}

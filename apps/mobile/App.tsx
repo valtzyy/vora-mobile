@@ -5,13 +5,17 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { useFonts, Inter_400Regular, Inter_500Medium, Inter_700Bold } from '@expo-google-fonts/inter';
+import { useFonts } from 'expo-font';
+import { Geist_400Regular, Geist_500Medium, Geist_700Bold } from '@expo-google-fonts/geist';
+import { Lora_400Regular, Lora_600SemiBold } from '@expo-google-fonts/lora';
 import * as SplashScreen from 'expo-splash-screen';
 import { useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 
 import RootNavigator from './src/navigation/RootNavigator';
 import { queryClient } from './src/lib/queryClient';
 import StartupSplash from './src/components/StartupSplash';
+import { SettingsProvider } from './src/lib/i18n';
+import SettingsModal from './src/components/SettingsModal';
 import { configureNotificationHandler, attachNotificationResponseListener, requestNotificationPermissions } from './src/lib/notifications';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -26,10 +30,13 @@ export const navigationRef = createNavigationContainerRef<any>();
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function App() {
+  // Same pairing as the web app: Geist for UI/body, Lora for display serif.
   const [fontsLoaded, fontError] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_700Bold,
+    Geist_400Regular,
+    Geist_500Medium,
+    Geist_700Bold,
+    Lora_400Regular,
+    Lora_600SemiBold,
   });
   const [showSplash, setShowSplash] = useState(true);
   const [, requestCameraPermission] = useCameraPermissions();
@@ -68,12 +75,15 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-          <NavContainer ref={navigationRef}>
-            <RootNavigator />
-          </NavContainer>
-        </QueryClientProvider>
+        <SettingsProvider>
+          <QueryClientProvider client={queryClient}>
+            <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+            <NavContainer ref={navigationRef}>
+              <RootNavigator />
+            </NavContainer>
+            <SettingsModal />
+          </QueryClientProvider>
+        </SettingsProvider>
         {showSplash && <StartupSplash onFinish={() => setShowSplash(false)} />}
       </SafeAreaProvider>
     </GestureHandlerRootView>

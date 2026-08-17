@@ -5,10 +5,12 @@ import { useAuth } from '../lib/AuthContext';
 import { VoraApiError } from '@vora/api-client';
 import VoraButton from '../components/VoraButton';
 import VoraInput from '../components/VoraInput';
+import { useSettings } from '../lib/i18n';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
   const { login } = useAuth();
+  const { t } = useSettings();
   
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -16,7 +18,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!username || !password) {
-      Alert.alert('Error', 'Please enter both username and password');
+      Alert.alert(t('auth.error'), t('auth.enterBoth'));
       return;
     }
 
@@ -26,7 +28,7 @@ export default function LoginScreen() {
     } catch (error) {
       const message =
         error instanceof VoraApiError ? error.detail : (error as Error)?.message;
-      Alert.alert('Login Failed', message || 'Check your credentials and try again.');
+      Alert.alert(t('auth.loginFailed'), message || t('auth.checkCredentials'));
     } finally {
       setIsLoading(false);
     }
@@ -35,23 +37,23 @@ export default function LoginScreen() {
   return (
     <ScrollView className="flex-1 bg-white">
       <View className="px-6 py-16 mt-10">
-        <Text className="text-4xl font-serif text-vora-dark mb-2">Welcome Back</Text>
+        <Text className="text-4xl font-serif text-vora-dark mb-2">{t('auth.welcomeBack')}</Text>
         <Text className="text-[15px] font-sans text-gray-500 mb-10">
-          Sign in to Vora to continue your tree scans
+          {t('auth.loginSubtitle')}
         </Text>
 
         <View className="space-y-2 mb-6">
           <VoraInput
-            label="Username"
-            placeholder="Enter your username"
+            label={t('auth.username')}
+            placeholder={t('auth.usernamePlaceholder')}
             value={username}
             onChangeText={setUsername}
             autoCapitalize="none"
             autoCorrect={false}
           />
           <VoraInput
-            label="Password"
-            placeholder="Enter your password"
+            label={t('auth.password')}
+            placeholder={t('auth.passwordPlaceholder')}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -59,7 +61,7 @@ export default function LoginScreen() {
         </View>
 
         <VoraButton
-          title="Sign In"
+          title={t('common.signIn')}
           onPress={handleLogin}
           isLoading={isLoading}
           variant="primary"
@@ -68,17 +70,17 @@ export default function LoginScreen() {
 
         <View className="mt-6 p-3 rounded-lg bg-gray-50 border border-gray-200">
           <Text className="text-xs font-sans text-gray-500">
-            Demo account: <Text className="font-sansMedium text-gray-700">juri_demo</Text> / <Text className="font-sansMedium text-gray-700">demo123</Text>
+            {t('auth.demoAccount')} <Text className="font-sansMedium text-gray-700">juri_demo</Text> / <Text className="font-sansMedium text-gray-700">demo123</Text>
           </Text>
         </View>
 
         <View className="flex-row justify-center mt-8">
-          <Text className="text-gray-500 font-sans">Don't have an account? </Text>
+          <Text className="text-gray-500 font-sans">{t('auth.noAccount')}</Text>
           <Text
             className="text-vora-green font-sansMedium"
             onPress={() => navigation.navigate('Register' as never)}
           >
-            Sign Up
+            {t('auth.signUp')}
           </Text>
         </View>
 
@@ -88,7 +90,7 @@ export default function LoginScreen() {
               className="text-gray-400 font-sans"
               onPress={() => navigation.goBack()}
             >
-              Continue without an account
+              {t('auth.continueWithout')}
             </Text>
           </View>
         )}

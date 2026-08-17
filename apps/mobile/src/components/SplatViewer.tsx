@@ -8,6 +8,7 @@ import {
   Image,
   Platform,
 } from 'react-native';
+import { useSettings } from '../lib/i18n';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { API_BASE_URL } from '../lib/config';
@@ -80,6 +81,7 @@ export default function SplatViewer({
   onInteractionStateChange,
   height = 320,
 }: SplatViewerProps) {
+  const { t } = useSettings();
   const webviewRef = useRef<WebView>(null);
   const [viewMode, setViewMode]       = useState<ViewMode>('thumbnail');
   const [sceneLoaded, setSceneLoaded] = useState(false);
@@ -193,11 +195,11 @@ export default function SplatViewer({
   if (loadError && viewMode !== 'thumbnail') {
     return (
       <View style={[styles.container, { height }, styles.centered]}>
-        <Ionicons name="alert-circle-outline" size={32} color="#fca5a5" style={{ marginBottom: 8 }} />
+        <Ionicons name="alert-circle-outline" size={32} color="#eda48d" style={{ marginBottom: 8 }} />
         <Text style={styles.errorText}>Could not load 3D view</Text>
         <Text style={styles.errorHint}>{loadError}</Text>
         <TouchableOpacity onPress={resetToThumbnail} style={[styles.retryBtn, { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }]}>
-          <Ionicons name="arrow-back" size={14} color="#e2e8f0" />
+          <Ionicons name="arrow-back" size={14} color="#e7e5e4" />
           <Text style={styles.retryBtnText}>Back</Text>
         </TouchableOpacity>
       </View>
@@ -229,7 +231,7 @@ export default function SplatViewer({
               : 'Gaussian splat · estimasi 15–30 detik'}
           </Text>
           <TouchableOpacity
-            style={[styles.load3dButton, { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#10b981', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 99 }]}
+            style={[styles.load3dButton, { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#616c39', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 99 }]}
             onPress={async () => {
               if (points3dUrl) {
                 enterViewMode('pointcloud');
@@ -256,9 +258,9 @@ export default function SplatViewer({
   return (
     <View style={[styles.container, { height }]}>
       {webviewCrashed ? (
-        <View style={[StyleSheet.absoluteFillObject, styles.centered, { backgroundColor: '#111827' }]}>
-          <Text style={styles.errorText}>WebView crashed</Text>
-          <Text style={styles.errorHint}>Device may be low on memory.</Text>
+        <View style={[StyleSheet.absoluteFillObject, styles.centered, { backgroundColor: '#1c1917' }]}>
+          <Text style={styles.errorText}>{t('viewer.crashed')}</Text>
+          <Text style={styles.errorHint}>{t('viewer.crashedHint')}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={resetToThumbnail}>
             <Text style={styles.retryBtnText}>← Back</Text>
           </TouchableOpacity>
@@ -297,7 +299,7 @@ export default function SplatViewer({
       {/* Loading overlay */}
       {!sceneLoaded && !webviewCrashed && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#10b981" />
+          <ActivityIndicator size="large" color="#616c39" />
           <Text style={styles.loadingText}>
             {viewMode === 'pointcloud' ? 'Loading point cloud…' : 'Loading 3D splat…'}
           </Text>
@@ -313,7 +315,7 @@ export default function SplatViewer({
             </View>
           )}
           <TouchableOpacity style={[styles.cancelLoadBtn, { flexDirection: 'row', alignItems: 'center', gap: 4 }]} onPress={resetToThumbnail}>
-            <Ionicons name="arrow-back" size={14} color="#64748b" />
+            <Ionicons name="arrow-back" size={14} color="#78716c" />
             <Text style={styles.cancelLoadText}>Cancel</Text>
           </TouchableOpacity>
         </View>
@@ -322,7 +324,7 @@ export default function SplatViewer({
       {/* Back button (after load) */}
       {sceneLoaded && (
         <TouchableOpacity style={styles.backBtn} onPress={resetToThumbnail}>
-          <Ionicons name="close" size={18} color="#e2e8f0" />
+          <Ionicons name="close" size={18} color="#e7e5e4" />
         </TouchableOpacity>
       )}
 
@@ -352,8 +354,8 @@ export default function SplatViewer({
           style={[styles.upgradeBadge, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
           onPress={() => enterViewMode('gaussian')}
         >
-          <Ionicons name="sparkles-outline" size={12} color="#a3e635" />
-          <Text style={styles.upgradeBadgeText}>Load Gaussian Splat</Text>
+          <Ionicons name="sparkles-outline" size={12} color="#5ea500" />
+          <Text style={styles.upgradeBadgeText}>{t('viewer.loadSplat')}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -361,27 +363,27 @@ export default function SplatViewer({
 }
 
 const styles = StyleSheet.create({
-  container: { width: '100%', borderRadius: 12, overflow: 'hidden', backgroundColor: '#111827' },
-  webview:   { flex: 1, backgroundColor: '#0f1923' },
+  container: { width: '100%', borderRadius: 12, overflow: 'hidden', backgroundColor: '#1c1917' },
+  webview:   { flex: 1, backgroundColor: '#1c1917' },
   centered:  { justifyContent: 'center', alignItems: 'center', padding: 20 },
 
-  errorText:    { color: '#fca5a5', fontSize: 14, fontWeight: '600', marginBottom: 4 },
-  errorHint:    { color: '#9ca3af', fontSize: 12, textAlign: 'center', marginBottom: 12 },
-  retryBtn:     { backgroundColor: '#1e293b', paddingHorizontal: 18, paddingVertical: 8, borderRadius: 8 },
-  retryBtnText: { color: '#e2e8f0', fontSize: 12, fontWeight: '700' },
+  errorText:    { color: '#eda48d', fontSize: 14, fontWeight: '600', marginBottom: 4 },
+  errorHint:    { color: '#a8a29e', fontSize: 12, textAlign: 'center', marginBottom: 12 },
+  retryBtn:     { backgroundColor: '#292524', paddingHorizontal: 18, paddingVertical: 8, borderRadius: 8 },
+  retryBtnText: { color: '#e7e5e4', fontSize: 12, fontWeight: '700' },
 
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f1923',
+    justifyContent: 'center', alignItems: 'center', backgroundColor: '#1c1917',
   },
-  loadingText:  { color: '#e5e7eb', fontSize: 13, fontWeight: '600', marginTop: 12 },
+  loadingText:  { color: '#e7e5e4', fontSize: 13, fontWeight: '600', marginTop: 12 },
   timingBox: {
     marginTop: 14, backgroundColor: 'rgba(255,255,255,0.04)',
     borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, minWidth: 220,
   },
-  timingRow:       { color: '#6ee7b7', fontSize: 10, fontFamily: 'monospace', lineHeight: 16 },
+  timingRow:       { color: '#b7c096', fontSize: 10, fontFamily: 'monospace', lineHeight: 16 },
   cancelLoadBtn:   { marginTop: 20, paddingHorizontal: 16, paddingVertical: 8 },
-  cancelLoadText:  { color: '#64748b', fontSize: 12 },
+  cancelLoadText:  { color: '#78716c', fontSize: 12 },
 
   controlsBar:    { position: 'absolute', bottom: 12, right: 12 },
   editButtonsRow: { flexDirection: 'row', gap: 8 },
@@ -389,7 +391,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(17,24,39,0.85)',
     paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8,
   },
-  saveButton:        { backgroundColor: '#16a34a' },
+  saveButton:        { backgroundColor: '#616c39' },
   cancelButton:      { backgroundColor: 'rgba(220,38,38,0.85)' },
   controlButtonText: { color: '#ffffff', fontSize: 12, fontWeight: '700' },
 
@@ -399,16 +401,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center', justifyContent: 'center',
   },
-  backBtnText: { color: '#e2e8f0', fontSize: 13, fontWeight: '700' },
+  backBtnText: { color: '#e7e5e4', fontSize: 13, fontWeight: '700' },
 
   upgradeBadge: {
     position: 'absolute', bottom: 12, left: 12,
     backgroundColor: 'rgba(17,24,39,0.85)',
     paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8,
   },
-  upgradeBadgeText: { color: '#a3e635', fontSize: 11, fontWeight: '700' },
+  upgradeBadgeText: { color: '#5ea500', fontSize: 11, fontWeight: '700' },
 
-  placeholderBg:     { backgroundColor: '#1a2e1a', justifyContent: 'center', alignItems: 'center' },
+  placeholderBg:     { backgroundColor: '#2b301a', justifyContent: 'center', alignItems: 'center' },
   placeholderIcon:   { fontSize: 48, opacity: 0.3 },
   thumbnailOverlay:  { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.42)' },
   loadPromptContent: {
@@ -418,9 +420,9 @@ const styles = StyleSheet.create({
   loadPromptTitle:   { color: '#ffffff', fontSize: 16, fontWeight: '700', marginBottom: 6, letterSpacing: 0.5 },
   loadPromptSub:     { color: 'rgba(255,255,255,0.6)', fontSize: 11, textAlign: 'center', marginBottom: 20, lineHeight: 16 },
   load3dButton: {
-    backgroundColor: '#10b981', paddingHorizontal: 22, paddingVertical: 11,
+    backgroundColor: '#616c39', paddingHorizontal: 22, paddingVertical: 11,
     borderRadius: 100, elevation: 8,
-    shadowColor: '#10b981', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 12,
+    shadowColor: '#616c39', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 12,
   },
   load3dButtonText: { color: '#ffffff', fontSize: 14, fontWeight: '700', letterSpacing: 0.3 },
 });

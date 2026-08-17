@@ -23,6 +23,7 @@ import PlotGrid, { type PlotGridPosition } from '../../components/plots/PlotGrid
 import PlotMapView from '../../components/plots/PlotMapView';
 import ClaimTreeModal from '../../components/plots/ClaimTreeModal';
 import EditPlotModal from '../../components/plots/EditPlotModal';
+import { useSettings } from '../../lib/i18n';
 
 type Nav = NativeStackNavigationProp<PlotsStackParamList, 'PlotDetail'>;
 type Route = RouteProp<PlotsStackParamList, 'PlotDetail'>;
@@ -34,6 +35,7 @@ export default function PlotDetailScreen() {
   const navigation = useNavigation<Nav>();
   const { plotCode } = route.params;
   const { user, token } = useAuth();
+  const { t } = useSettings();
 
   const [view, setView] = useState<'grid' | 'map'>('grid');
   const [claimOpen, setClaimOpen] = useState(false);
@@ -94,24 +96,24 @@ export default function PlotDetailScreen() {
   const { diversityLevel, diversityDesc } = useMemo(() => {
     if (scans.length === 0) {
       return {
-        diversityLevel: 'No Trees Yet',
-        diversityDesc: 'Add trees to this plot to evaluate species biodiversity.'
+        diversityLevel: t('plot.divNone'),
+        diversityDesc: t('plot.divNoneDesc')
       };
     }
     if (shannonIndex < 1.5) {
       return {
-        diversityLevel: 'Low Diversity',
-        diversityDesc: 'This plot has low species diversity, meaning it is dominated by one or a few species.'
+        diversityLevel: t('plot.divLow'),
+        diversityDesc: t('plot.divLowDesc')
       };
     } else if (shannonIndex <= 3.0) {
       return {
-        diversityLevel: 'Medium Diversity',
-        diversityDesc: 'This plot has moderate species diversity, indicating a healthy mix of species.'
+        diversityLevel: t('plot.divMed'),
+        diversityDesc: t('plot.divMedDesc')
       };
     } else {
       return {
-        diversityLevel: 'High Diversity',
-        diversityDesc: 'This plot has high species diversity, reflecting a highly resilient ecological structure.'
+        diversityLevel: t('plot.divHigh'),
+        diversityDesc: t('plot.divHighDesc')
       };
     }
   }, [shannonIndex, scans.length]);
@@ -119,12 +121,12 @@ export default function PlotDetailScreen() {
   const handleExportPress = () => {
     if (!plot) return;
     Alert.alert(
-      'Export Carbon Data',
-      'Select a format to download and share the plot carbon metrics:',
+      t('plot.exportTitle'),
+      t('plot.exportMsg'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Export CSV',
+          text: t('plot.exportCsv'),
           onPress: () => {
             const url = `${API_BASE_URL}/plots/${plot.plot_code}/export?format=csv`;
             const filename = `Plot_${plot.plot_code}_Carbon_Data.csv`;
@@ -132,7 +134,7 @@ export default function PlotDetailScreen() {
           }
         },
         {
-          text: 'Export Excel (.xlsx)',
+          text: t('plot.exportExcel'),
           onPress: () => {
             const url = `${API_BASE_URL}/plots/${plot.plot_code}/export?format=xlsx`;
             const filename = `Plot_${plot.plot_code}_Carbon_Data.xlsx`;
@@ -175,10 +177,10 @@ export default function PlotDetailScreen() {
 
   const handleRemoveScan = (treeCode: string) => {
     if (!plot) return;
-    Alert.alert('Remove Tree', `Remove ${treeCode} from this plot? It will become claimable again.`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('plot.removeTitle'), `${treeCode} ${t('plot.removeMsg')}`, [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Remove',
+        text: t('plot.remove'),
         style: 'destructive',
         onPress: async () => {
           try {
@@ -186,7 +188,7 @@ export default function PlotDetailScreen() {
             refetch();
           } catch (err) {
             const message = err instanceof VoraApiError ? err.detail : (err as Error)?.message;
-            Alert.alert('Could Not Remove Tree', message || 'Please try again.');
+            Alert.alert(t('plot.couldNotRemove'), message || t('common.tryAgain'));
           }
         },
       },
@@ -196,7 +198,7 @@ export default function PlotDetailScreen() {
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 justify-center items-center p-6 bg-white">
-        <ActivityIndicator size="large" color="#059669" />
+        <ActivityIndicator size="large" color="#616c39" />
       </SafeAreaView>
     );
   }
@@ -204,7 +206,7 @@ export default function PlotDetailScreen() {
   if (isError || !plot) {
     return (
       <SafeAreaView className="flex-1 justify-center items-center p-6 bg-white">
-        <Text className="text-lg font-bold text-red-650 mb-1.5">Could Not Load Plot</Text>
+        <Text className="text-lg font-bold text-red-650 mb-1.5">{t('plot.couldNotLoad')}</Text>
         <Text className="text-xs text-slate-500 text-center mb-4">
           {error instanceof VoraApiError ? error.detail : (error as Error)?.message || 'Plot not found.'}
         </Text>
@@ -212,7 +214,7 @@ export default function PlotDetailScreen() {
           className="bg-emerald-600 py-2.5 px-5 rounded-xl active:scale-[0.97]"
           onPress={() => refetch()}
         >
-          <Text className="text-white text-xs font-bold">Retry</Text>
+          <Text className="text-white text-xs font-bold">{t('plot.retry')}</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -239,7 +241,7 @@ export default function PlotDetailScreen() {
               className="bg-slate-100 px-3.5 py-2 rounded-xl active:scale-[0.97]"
               onPress={() => setEditOpen(true)}
             >
-              <Text className="text-xs font-bold text-slate-600">Edit</Text>
+              <Text className="text-xs font-bold text-slate-600">{t('plot.edit')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -272,9 +274,9 @@ export default function PlotDetailScreen() {
 
         {/* Stats row */}
         <View className="flex-row gap-3 mb-4.5">
-          <StatBox label="Trees" value={String(scans.length)} />
-          <StatBox label="Avg DBH" value={formatDBH(stats.avgDbh)} />
-          <StatBox label="Avg Height" value={formatHeight(stats.avgHeight)} />
+          <StatBox label={t('plot.trees')} value={String(scans.length)} />
+          <StatBox label={t('plot.avgDbh')} value={formatDBH(stats.avgDbh)} />
+          <StatBox label={t('plot.avgHeight')} value={formatHeight(stats.avgHeight)} />
         </View>
 
         {/* Species Distribution & Biodiversity card */}
@@ -290,7 +292,7 @@ export default function PlotDetailScreen() {
                 <Text className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   Shannon-Wiener Index (H')
                 </Text>
-                <Text className="text-base font-bold text-[#191919]">
+                <Text className="text-base font-bold text-[#292524]">
                   {shannonIndex.toFixed(2)}
                 </Text>
               </View>
@@ -335,7 +337,7 @@ export default function PlotDetailScreen() {
             className={`py-2 px-4.5 rounded-full ${view === 'grid' ? 'bg-emerald-50' : 'bg-slate-100'} active:scale-[0.97]`}
             onPress={() => setView('grid')}
           >
-            <Text className={`text-xs font-bold ${view === 'grid' ? 'text-emerald-700' : 'text-slate-500'}`}>Grid</Text>
+            <Text className={`text-xs font-bold ${view === 'grid' ? 'text-emerald-700' : 'text-slate-500'}`}>{t('plot.grid')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             className={`py-2 px-4.5 rounded-full ${view === 'map' ? 'bg-emerald-50' : 'bg-slate-100'} active:scale-[0.97]`}
@@ -346,7 +348,7 @@ export default function PlotDetailScreen() {
         </View>
 
         {scans.length === 0 ? (
-          <Text className="text-xs text-slate-400 italic mb-4">No trees in this plot yet.</Text>
+          <Text className="text-xs text-slate-400 italic mb-4">{t('plot.noTreesYet')}</Text>
         ) : view === 'grid' ? (
           <PlotGrid scans={scans} onPositionsChange={handlePositionsChange} />
         ) : (
@@ -363,7 +365,7 @@ export default function PlotDetailScreen() {
               <Text className="text-white text-xs font-bold">+ Add Tree</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              className="flex-1 bg-[#191919] py-3 rounded-xl items-center justify-center active:scale-[0.97]"
+              className="flex-1 bg-[#292524] py-3 rounded-xl items-center justify-center active:scale-[0.97]"
               onPress={handleExportPress}
               activeOpacity={0.8}
             >
@@ -373,7 +375,7 @@ export default function PlotDetailScreen() {
         )}
 
         {/* Tree list */}
-        <Text className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Trees</Text>
+        <Text className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">{t('plot.trees')}</Text>
         {scans.map((scan) => {
           const KeyedView = View as any;
           return (
@@ -386,7 +388,7 @@ export default function PlotDetailScreen() {
             </View>
             {isOwner && (
               <TouchableOpacity onPress={() => handleRemoveScan(scan.tree_code)} hitSlop={8}>
-                <Text className="text-xs font-bold text-red-500">Remove</Text>
+                <Text className="text-xs font-bold text-red-500">{t('plot.remove')}</Text>
               </TouchableOpacity>
             )}
           </KeyedView>

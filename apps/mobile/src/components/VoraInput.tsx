@@ -28,7 +28,7 @@ export default function VoraInput({ label, error, className = '', ...props }: Vo
       >
         <TextInput
           className="flex-1 text-vora-dark font-sans text-[15px]"
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor="#a8a29e"
           onFocus={(e) => {
             setIsFocused(true);
             props.onFocus?.(e);

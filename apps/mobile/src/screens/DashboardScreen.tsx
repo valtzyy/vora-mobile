@@ -16,6 +16,7 @@ import { formatCO2eCompact, getDisplaySpecies, isScanValid } from '@vora/domain'
 import type { Plot } from '@vora/types';
 import { client } from '../lib/voraClient';
 import { useAuth } from '../lib/AuthContext';
+import { useSettings } from '../lib/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import VoraButton from '../components/VoraButton';
 
@@ -24,6 +25,7 @@ type Tab = 'trees' | 'plots';
 export default function DashboardScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
+  const { t } = useSettings();
   const [tab, setTab] = useState<Tab>('trees');
 
   // Query user scans
@@ -69,16 +71,16 @@ export default function DashboardScreen() {
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
         <View className="items-center w-full max-w-[320px]">
           <View className="w-16 h-16 rounded-full bg-emerald-50 justify-center items-center mb-5 border border-emerald-100/50">
-            <Ionicons name="stats-chart-outline" size={30} color="#059669" />
+            <Ionicons name="stats-chart-outline" size={30} color="#616c39" />
           </View>
           <Text className="text-xl font-sansBold text-slate-900 mb-2 text-center font-bold">
-            Sign In Required
+            {t('dash.signInRequired')}
           </Text>
           <Text className="text-sm font-sans text-slate-500 text-center leading-relaxed mb-6">
-            Log in from the Account tab to access your private dashboard, view your plots, and manage your tree measurements.
+            {t('dash.signInDesc')}
           </Text>
           <VoraButton
-            title="Go to Account"
+            title={t('dash.goToAccount')}
             onPress={() => navigation.navigate('Account')}
             variant="primary"
             className="w-full"
@@ -97,11 +99,11 @@ export default function DashboardScreen() {
       {/* Header */}
       <View className="px-5 pt-3 pb-2 flex-row justify-between items-center">
         <View className="flex-col">
-          <Text className="font-serif text-3xl text-vora-dark mb-0.5">Dashboard</Text>
+          <Text className="font-serif text-3xl text-vora-dark mb-0.5">{t('dash.title')}</Text>
           <Text className="text-[10px] font-sansBold text-slate-400 uppercase tracking-wider">
             {tab === 'trees'
-              ? `${displayScans.length} of your trees`
-              : `${displayPlots.length} of your plots`}
+              ? `${displayScans.length} ${t('dash.yourTrees')}`
+              : `${displayPlots.length} ${t('dash.yourPlots')}`}
           </Text>
         </View>
         {tab === 'plots' && (
@@ -110,7 +112,7 @@ export default function DashboardScreen() {
             onPress={() => navigation.navigate('CreatePlot')}
             className="bg-emerald-600 px-3.5 py-2 rounded-xl shadow-sm active:bg-emerald-700"
           >
-            <Text className="color-white text-xs font-sansBold font-bold">+ New Plot</Text>
+            <Text className="color-white text-xs font-sansBold font-bold">{t('dash.newPlot')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -123,7 +125,7 @@ export default function DashboardScreen() {
           className={`px-4 py-2 rounded-full border ${tab === 'trees' ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200/60'}`}
         >
           <Text className={`text-xs font-sansBold ${tab === 'trees' ? 'text-emerald-700' : 'text-slate-500'}`}>
-            My Trees
+            {t('dash.myTrees')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -132,7 +134,7 @@ export default function DashboardScreen() {
           className={`px-4 py-2 rounded-full border ${tab === 'plots' ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200/60'}`}
         >
           <Text className={`text-xs font-sansBold ${tab === 'plots' ? 'text-emerald-700' : 'text-slate-500'}`}>
-            My Plots
+            {t('dash.myPlots')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -140,23 +142,23 @@ export default function DashboardScreen() {
       {/* Loading state */}
       {isBusy ? (
         <View className="flex-1 justify-center items-center p-6">
-          <ActivityIndicator size="large" color="#10b981" />
+          <ActivityIndicator size="large" color="#616c39" />
           <Text className="mt-4 text-base font-sansBold text-vora-dark">
-            Loading {tab === 'trees' ? 'My Trees...' : 'My Plots...'}
+            {tab === 'trees' ? t('dash.loadingTrees') : t('dash.loadingPlots')}
           </Text>
         </View>
       ) : activeQuery.isError ? (
         /* Error state */
         <View className="flex-1 justify-center items-center p-6">
           <View className="w-12 h-12 rounded-full bg-red-50 justify-center items-center mb-4 border border-red-100/50">
-            <Ionicons name="alert-circle-outline" size={24} color="#dc2626" />
+            <Ionicons name="alert-circle-outline" size={24} color="#c25f3f" />
           </View>
-          <Text className="text-lg font-sansBold text-red-700 mb-1 text-center">Connection Failed</Text>
+          <Text className="text-lg font-sansBold text-red-700 mb-1 text-center">{t('dash.connectionFailed')}</Text>
           <Text className="text-xs font-sans text-slate-500 text-center mb-5 max-w-[280px]">
-            {(activeQuery.error as Error)?.message || 'A network error occurred while connecting to the Vora server.'}
+            {(activeQuery.error as Error)?.message || t('dash.connectionFailedDesc')}
           </Text>
           <VoraButton
-            title="Try Again"
+            title={t('common.retry')}
             onPress={() => activeQuery.refetch()}
             variant="primary"
             className="w-48"
@@ -166,19 +168,17 @@ export default function DashboardScreen() {
         /* Empty State */
         <View className="flex-1 justify-center items-center p-6">
           <View className="w-16 h-16 rounded-full bg-emerald-50 justify-center items-center mb-4 border border-emerald-100/50">
-            <Ionicons name={tab === 'trees' ? 'leaf-outline' : 'grid-outline'} size={28} color="#059669" />
+            <Ionicons name={tab === 'trees' ? 'leaf-outline' : 'grid-outline'} size={28} color="#616c39" />
           </View>
           <Text className="text-lg font-serif text-slate-900 mb-1.5 text-center">
-            No {tab === 'trees' ? 'Trees' : 'Plots'} Found
+            {tab === 'trees' ? t('dash.noTrees') : t('dash.noPlots')}
           </Text>
           <Text className="text-xs font-sans text-slate-500 text-center leading-relaxed mb-6 max-w-[260px]">
-            {tab === 'trees'
-              ? "You haven't scanned or claimed any trees under your account yet."
-              : "You haven't created or claimed any plots under your account yet."}
+            {tab === 'trees' ? t('dash.noTreesDesc') : t('dash.noPlotsDesc')}
           </Text>
           {tab === 'plots' && (
             <VoraButton
-              title="Create Your First Plot"
+              title={t('dash.createFirstPlot')}
               onPress={() => navigation.navigate('CreatePlot')}
               variant="primary"
               className="w-56"
@@ -195,8 +195,8 @@ export default function DashboardScreen() {
             <RefreshControl
               refreshing={activeQuery.isRefetching}
               onRefresh={handleRefresh}
-              colors={['#10b981']}
-              tintColor="#10b981"
+              colors={['#616c39']}
+              tintColor="#616c39"
             />
           }
         >
@@ -262,7 +262,7 @@ export default function DashboardScreen() {
                         </Text>
                         {isInvalid ? (
                           <Text className="text-[10px] font-sansBold text-rose-500">
-                            Invalid scan
+                            {t('dash.invalidScan')}
                           </Text>
                         ) : (
                           <Text className="text-[10px] font-sansMedium text-slate-500">
@@ -272,14 +272,14 @@ export default function DashboardScreen() {
                       </View>
 
                       <View className="bg-[#141417] rounded-lg px-4 py-2 self-center">
-                        <Text className="text-xs font-sansBold text-white font-bold">View</Text>
+                        <Text className="text-xs font-sansBold text-white font-bold">{t('dash.view')}</Text>
                       </View>
                     </View>
 
                     {/* Species prediction banner */}
                     {species.isIdentified && (
                       <View className="bg-emerald-50 border-t border-emerald-100/50 flex-row items-center p-2.5 rounded-b-xl -mx-2 -mb-2 mt-1">
-                        <Ionicons name="leaf-outline" size={14} color="#065f46" style={{ marginRight: 6 }} />
+                        <Ionicons name="leaf-outline" size={14} color="#4e572c" style={{ marginRight: 6 }} />
                         <Text className="text-xs font-sansMedium text-emerald-800 flex-1" numberOfLines={1}>
                           {species.displayName}
                         </Text>
@@ -324,7 +324,7 @@ export default function DashboardScreen() {
                   )}
                   <View className="flex-row justify-between items-center border-t border-slate-100 pt-3 mt-1">
                     <Text className="text-xs font-sansBold text-slate-400 font-bold">
-                      {plot.scans_count ?? 0} trees
+                      {plot.scans_count ?? 0} {t('dash.trees')}
                     </Text>
                     <Text className="text-xs font-sansBold text-emerald-600 font-bold">
                       {formatCO2eCompact(plot.total_co2e_kg)}

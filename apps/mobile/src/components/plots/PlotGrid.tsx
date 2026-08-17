@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
+import { useSettings } from '../../lib/i18n';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, runOnJS } from 'react-native-reanimated';
 import type { ScanRecord } from '@vora/types';
@@ -29,6 +30,7 @@ interface PlotGridProps {
  * fallback layout (row-major fill) so nothing starts stacked at (0,0).
  */
 export default function PlotGrid({ scans, onPositionsChange, onSelectTree }: PlotGridProps) {
+  const { t } = useSettings();
   const positionsRef = React.useRef<Map<string, { x: number; y: number }>>(new Map());
 
   scans.forEach((scan, i) => {
@@ -54,7 +56,7 @@ export default function PlotGrid({ scans, onPositionsChange, onSelectTree }: Plo
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.hint}>Drag a tree to arrange it spatially. Positions auto-save.</Text>
+      <Text style={styles.hint}>{t('plot.gridHint')}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator style={styles.scrollX}>
         <ScrollView showsVerticalScrollIndicator style={styles.scrollY}>
           <View style={styles.grid}>
@@ -148,22 +150,22 @@ function TreeChip({
 
 const styles = StyleSheet.create({
   wrap: { marginBottom: 16 },
-  hint: { fontSize: 12, color: '#9ca3af', marginBottom: 8 },
-  scrollX: { maxHeight: 320, borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb' },
+  hint: { fontSize: 12, color: '#a8a29e', marginBottom: 8 },
+  scrollX: { maxHeight: 320, borderRadius: 12, borderWidth: 1, borderColor: '#e7e5e4' },
   scrollY: { maxHeight: 320 },
   grid: {
     width: GRID_PX,
     height: GRID_PX,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#fafaf9',
   },
-  gridLineV: { position: 'absolute', top: 0, bottom: 0, width: 1, backgroundColor: '#e5e7eb' },
-  gridLineH: { position: 'absolute', left: 0, right: 0, height: 1, backgroundColor: '#e5e7eb' },
+  gridLineV: { position: 'absolute', top: 0, bottom: 0, width: 1, backgroundColor: '#e7e5e4' },
+  gridLineH: { position: 'absolute', left: 0, right: 0, height: 1, backgroundColor: '#e7e5e4' },
   chip: {
     position: 'absolute',
     width: CELL_SIZE,
     height: CELL_SIZE,
     borderRadius: CELL_SIZE / 2,
-    backgroundColor: '#16a34a',
+    backgroundColor: '#616c39',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,

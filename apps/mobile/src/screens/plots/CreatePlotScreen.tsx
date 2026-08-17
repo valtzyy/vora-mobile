@@ -18,10 +18,12 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { VoraApiError } from '@vora/api-client';
 import type { PlotsStackParamList } from '../../navigation/types';
 import { client } from '../../lib/voraClient';
+import { useSettings } from '../../lib/i18n';
 
 type Nav = NativeStackNavigationProp<PlotsStackParamList, 'CreatePlot'>;
 
 export default function CreatePlotScreen() {
+  const { t } = useSettings();
   const navigation = useNavigation<Nav>();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -36,13 +38,13 @@ export default function CreatePlotScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Location Permission Needed', 'Enable location access to tag this plot with GPS coordinates.');
+        Alert.alert(t('plot.locationPermission'), t('plot.locationPermissionMsg'));
         return;
       }
       const pos = await Location.getCurrentPositionAsync({});
       setGps({ lat: pos.coords.latitude, lon: pos.coords.longitude });
     } catch (err) {
-      Alert.alert('Could Not Get Location', (err as Error)?.message || 'Please try again.');
+      Alert.alert(t('plot.couldNotGetLocation'), (err as Error)?.message || t('common.tryAgain'));
     } finally {
       setIsLocating(false);
     }
@@ -50,7 +52,7 @@ export default function CreatePlotScreen() {
 
   const handleCreate = async () => {
     if (!name.trim()) {
-      Alert.alert('Name Required', 'Give this plot a name.');
+      Alert.alert(t('plot.nameRequired'), t('plot.nameRequiredMsg'));
       return;
     }
     setIsSubmitting(true);
@@ -67,7 +69,7 @@ export default function CreatePlotScreen() {
       navigation.replace('PlotDetail', { plotCode: result.plot_code });
     } catch (err) {
       const message = err instanceof VoraApiError ? err.detail : (err as Error)?.message;
-      Alert.alert('Could Not Create Plot', message || 'Please try again.');
+      Alert.alert(t('plot.couldNotCreate'), message || t('common.tryAgain'));
     } finally {
       setIsSubmitting(false);
     }
@@ -77,31 +79,31 @@ export default function CreatePlotScreen() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Create Plot</Text>
+        <Text style={styles.title}>{t('plot.createTitle')}</Text>
         <Text style={styles.subtitle}>Group trees together — a garden, a plantation, a research site.</Text>
 
-        <Text style={styles.fieldLabel}>Name</Text>
-        <TextInput style={styles.textInput} value={name} onChangeText={setName} placeholder="e.g. Kebun Belakang Kampus" />
+        <Text style={styles.fieldLabel}>{t('plot.name')}</Text>
+        <TextInput style={styles.textInput} value={name} onChangeText={setName} placeholder={t('plot.namePlaceholder')} />
 
-        <Text style={styles.fieldLabel}>Description (optional)</Text>
+        <Text style={styles.fieldLabel}>{t('plot.descriptionOptional')}</Text>
         <TextInput
           style={[styles.textInput, styles.textArea]}
           value={description}
           onChangeText={setDescription}
-          placeholder="What is this plot for?"
+          placeholder={t('plot.descriptionPlaceholder')}
           multiline
           numberOfLines={3}
         />
 
         <View style={styles.switchRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.fieldLabel}>Public</Text>
-            <Text style={styles.fieldHint}>Public plots are visible to everyone in the Gallery.</Text>
+            <Text style={styles.fieldLabel}>{t('plot.public')}</Text>
+            <Text style={styles.fieldHint}>{t('plot.publicHint')}</Text>
           </View>
           <Switch value={isPublic} onValueChange={setIsPublic} />
         </View>
 
-        <Text style={styles.fieldLabel}>Target CO2e (kg, optional)</Text>
+        <Text style={styles.fieldLabel}>{t('plot.targetCo2eOptional')}</Text>
         <TextInput
           style={styles.textInput}
           value={targetCo2e}
@@ -110,17 +112,17 @@ export default function CreatePlotScreen() {
           keyboardType="numeric"
         />
 
-        <Text style={styles.fieldLabel}>GPS Centroid (optional)</Text>
+        <Text style={styles.fieldLabel}>{t('plot.gpsCentroid')}</Text>
         {gps ? (
           <Text style={styles.gpsValue}>{gps.lat.toFixed(4)}°, {gps.lon.toFixed(4)}°</Text>
         ) : (
-          <Text style={styles.fieldHint}>No location set.</Text>
+          <Text style={styles.fieldHint}>{t('plot.noLocation')}</Text>
         )}
         <TouchableOpacity style={styles.secondaryButton} onPress={useCurrentLocation} disabled={isLocating}>
           {isLocating ? (
-            <ActivityIndicator size="small" color="#374151" />
+            <ActivityIndicator size="small" color="#44403c" />
           ) : (
-            <Text style={styles.secondaryButtonText}>Use Current Location</Text>
+            <Text style={styles.secondaryButtonText}>{t('plot.useCurrentLocation')}</Text>
           )}
         </TouchableOpacity>
 
@@ -132,7 +134,7 @@ export default function CreatePlotScreen() {
           {isSubmitting ? (
             <ActivityIndicator color="#ffffff" size="small" />
           ) : (
-            <Text style={styles.primaryButtonText}>Create Plot</Text>
+            <Text style={styles.primaryButtonText}>{t('plot.createTitle')}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -143,33 +145,33 @@ export default function CreatePlotScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#ffffff' },
   container: { padding: 24, paddingBottom: 40 },
-  title: { fontSize: 26, fontWeight: 'bold', color: '#111827', marginBottom: 6 },
-  subtitle: { fontSize: 14, color: '#6b7280', marginBottom: 24, lineHeight: 20 },
-  fieldLabel: { fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 6 },
-  fieldHint: { fontSize: 12, color: '#9ca3af', marginBottom: 8 },
+  title: { fontSize: 26, fontWeight: 'bold', color: '#1c1917', marginBottom: 6 },
+  subtitle: { fontSize: 14, color: '#78716c', marginBottom: 24, lineHeight: 20 },
+  fieldLabel: { fontSize: 14, fontWeight: '600', color: '#44403c', marginBottom: 6 },
+  fieldHint: { fontSize: 12, color: '#a8a29e', marginBottom: 8 },
   textInput: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: '#d6d3d1',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    color: '#111827',
+    color: '#1c1917',
     marginBottom: 18,
   },
   textArea: { minHeight: 80, textAlignVertical: 'top' },
   switchRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
-  gpsValue: { fontSize: 14, color: '#16a34a', fontWeight: '600', marginBottom: 8 },
+  gpsValue: { fontSize: 14, color: '#616c39', fontWeight: '600', marginBottom: 8 },
   secondaryButton: {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: '#f5f5f4',
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
     marginBottom: 24,
   },
-  secondaryButtonText: { color: '#374151', fontSize: 13, fontWeight: '600' },
+  secondaryButtonText: { color: '#44403c', fontSize: 13, fontWeight: '600' },
   primaryButton: {
-    backgroundColor: '#16a34a',
+    backgroundColor: '#616c39',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',

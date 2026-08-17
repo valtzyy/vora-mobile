@@ -17,6 +17,7 @@ import * as Sharing from 'expo-sharing';
 import { API_BASE_URL } from '../../lib/config';
 import { useAuth } from '../../lib/AuthContext';
 import type { ScanStackParamList } from '../../navigation/types';
+import { useSettings } from '../../lib/i18n';
 
 type Route = RouteProp<ScanStackParamList, 'CertificateViewer'>;
 
@@ -25,6 +26,7 @@ export default function CertificateViewerScreen() {
   const navigation = useNavigation();
   const { treeCode } = route.params;
   const { token } = useAuth();
+  const { t } = useSettings();
 
   const [loading, setLoading] = useState(true);
   const [localPdfUri, setLocalPdfUri] = useState<string | null>(null);
@@ -46,7 +48,7 @@ export default function CertificateViewerScreen() {
       });
     } catch (err) {
       console.error('[CertViewer Share Error]:', err);
-      Alert.alert('Error', (err as Error)?.message || 'Failed to share certificate.');
+      Alert.alert(t('auth.error'), (err as Error)?.message || t('cert.shareFailed'));
     }
   };
 
@@ -122,9 +124,9 @@ export default function CertificateViewerScreen() {
             activeOpacity={0.7}
             className="p-1 rounded-full hover:bg-slate-100"
           >
-            <Ionicons name="arrow-back" size={24} color="#1e293b" />
+            <Ionicons name="arrow-back" size={24} color="#292524" />
           </TouchableOpacity>
-          <Text className="text-lg font-sansBold text-slate-800 font-bold">Certificate</Text>
+          <Text className="text-lg font-sansBold text-slate-800 font-bold">{t('cert.title')}</Text>
         </View>
 
         {localPdfUri && (
@@ -133,7 +135,7 @@ export default function CertificateViewerScreen() {
             activeOpacity={0.7}
             className="p-2 rounded-full border bg-emerald-50 border-emerald-100"
           >
-            <Ionicons name="share-outline" size={20} color="#10b981" />
+            <Ionicons name="share-outline" size={20} color="#616c39" />
           </TouchableOpacity>
         )}
       </View>
@@ -142,14 +144,14 @@ export default function CertificateViewerScreen() {
       <View className="flex-1 bg-slate-100">
         {loading ? (
           <View className="flex-1 items-center justify-center p-6">
-            <ActivityIndicator size="large" color="#10b981" />
+            <ActivityIndicator size="large" color="#616c39" />
             <Text className="text-sm font-sansMedium text-slate-500 mt-4 text-center">
               Loading certificate...
             </Text>
           </View>
         ) : loadError ? (
           <View className="flex-1 items-center justify-center p-6 text-center">
-            <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
+            <Ionicons name="alert-circle-outline" size={48} color="#d97757" />
             <Text className="text-base font-sansBold text-slate-800 font-bold mt-4 mb-2">
               Failed to load certificate
             </Text>
@@ -162,7 +164,7 @@ export default function CertificateViewerScreen() {
               className="px-6 py-3 bg-emerald-500 rounded-xl flex-row items-center gap-2"
             >
               <Ionicons name="refresh-outline" size={18} color="#ffffff" />
-              <Text className="text-sm font-sansBold text-white font-bold">Try Again</Text>
+              <Text className="text-sm font-sansBold text-white font-bold">{t('common.retry')}</Text>
             </TouchableOpacity>
           </View>
         ) : Platform.OS === 'ios' && localPdfUri ? (
@@ -179,7 +181,7 @@ export default function CertificateViewerScreen() {
              Download (share sheet) actions. Neither fires automatically. */
           <View className="flex-1 items-center justify-center p-6">
             <View className="w-16 h-16 bg-emerald-100 rounded-2xl items-center justify-center mb-4">
-              <Ionicons name="document-text-outline" size={36} color="#10b981" />
+              <Ionicons name="document-text-outline" size={36} color="#616c39" />
             </View>
             <Text className="text-lg font-sansBold text-slate-800 font-bold text-center mb-2">
               Certificate Ready
@@ -193,15 +195,15 @@ export default function CertificateViewerScreen() {
               className="w-full max-w-[260px] py-3.5 bg-emerald-500 rounded-xl flex-row items-center justify-center gap-2 mb-3"
             >
               <Ionicons name="eye-outline" size={20} color="#ffffff" />
-              <Text className="text-base font-sansBold text-white font-bold">View Certificate</Text>
+              <Text className="text-base font-sansBold text-white font-bold">{t('cert.view')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleDownload}
               activeOpacity={0.8}
               className="w-full max-w-[260px] py-3.5 bg-white border border-emerald-200 rounded-xl flex-row items-center justify-center gap-2"
             >
-              <Ionicons name="download-outline" size={20} color="#10b981" />
-              <Text className="text-base font-sansBold text-emerald-600 font-bold">Download</Text>
+              <Ionicons name="download-outline" size={20} color="#616c39" />
+              <Text className="text-base font-sansBold text-emerald-600 font-bold">{t('cert.download')}</Text>
             </TouchableOpacity>
           </View>
         )}
