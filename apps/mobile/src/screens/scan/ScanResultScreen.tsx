@@ -301,8 +301,15 @@ export default function ScanResultScreen() {
             </View>
           )}
 
-          {/* Claim to plot */}
-          {user && !scan.claimed_by_user_id && (
+          {/* Claim to plot. Gated on plot_id, not claimed_by_user_id — the
+              backend sets claimed_by_user_id to the scanning user's own id
+              the moment a logged-in user creates a scan (see server.py's
+              /pipeline/reconstruct), so almost every scan already has it set
+              by the time this screen renders. plot_id is the field that
+              actually tracks plot assignment and stays null until the user
+              claims the scan into a plot. Also skip scans already claimed
+              by a DIFFERENT user, since claim-scan would just 409. */}
+          {user && !scan.plot_id && (!scan.claimed_by_user_id || scan.claimed_by_user_id === user.id) && (
             <VoraButton
               title="Claim to a Plot"
               variant="outline"

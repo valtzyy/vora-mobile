@@ -7,11 +7,12 @@ import { NavigationContainer, createNavigationContainerRef } from '@react-naviga
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_700Bold } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
+import { useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
 
 import RootNavigator from './src/navigation/RootNavigator';
 import { queryClient } from './src/lib/queryClient';
 import StartupSplash from './src/components/StartupSplash';
-import { configureNotificationHandler, attachNotificationResponseListener } from './src/lib/notifications';
+import { configureNotificationHandler, attachNotificationResponseListener, requestNotificationPermissions } from './src/lib/notifications';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const NavContainer: any = NavigationContainer;
@@ -31,6 +32,8 @@ export default function App() {
     Inter_700Bold,
   });
   const [showSplash, setShowSplash] = useState(true);
+  const [, requestCameraPermission] = useCameraPermissions();
+  const [, requestMicrophonePermission] = useMicrophonePermissions();
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
@@ -42,6 +45,18 @@ export default function App() {
     configureNotificationHandler();
     const unsubscribe = attachNotificationResponseListener(navigationRef);
     return unsubscribe;
+  }, []);
+
+  // Ask for camera, mic, and notification permissions once up front on app
+  // launch, so the OS prompts are out of the way before the user ever hits
+  // the record button or a scan finishes — screens that use these no longer
+  // need to request them just-in-time (they still guard on the granted
+  // state in case the user denies here or revokes it later in Settings).
+  useEffect(() => {
+    requestCameraPermission();
+    requestMicrophonePermission();
+    requestNotificationPermissions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!fontsLoaded && !fontError) {

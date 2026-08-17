@@ -19,7 +19,15 @@ export default function ScanMarkingScreen() {
   const [points, setPoints] = useState<TrunkMarkerPoints | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const frameUrl = `${API_BASE_URL}/frames/0000.jpg?t=${Date.now()}`;
+  // Must stay stable across re-renders. Recomputing this on every render
+  // (e.g. with a bare `Date.now()` at the top of the function body) gives
+  // TrunkMarker a "new" imageUri every time its own onChange fires — which
+  // is exactly what happens right after the 2nd tap completes a selection.
+  // TrunkMarker treats any imageUri change as a new frame and resets itself
+  // (clears taps, hides the image, calls onChange(null)), wiping the
+  // selection the instant it's made and leaving "Use Selected Points"
+  // permanently disabled.
+  const [frameUrl] = useState(() => `${API_BASE_URL}/frames/0000.jpg?t=${Date.now()}`);
 
   const startReconstruct = async (usePoints: boolean) => {
     setIsSubmitting(true);

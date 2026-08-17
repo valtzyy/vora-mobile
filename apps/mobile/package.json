@@ -40,6 +40,16 @@
     "tailwindcss": "^3.4.19",
     "vora-ar": "file:../../modules/vora-ar"
   },
+  "devDependencies": {
+    "babel-preset-expo": "^54.0.12"
+  },
+  "expo": {
+    "autolinking": {
+      "searchPaths": [
+        "../../modules"
+      ]
+    }
+  },
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",

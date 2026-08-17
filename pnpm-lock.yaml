@@ -126,6 +126,10 @@ importers:
       vora-ar:
         specifier: file:../../modules/vora-ar
         version: link:../../modules/vora-ar
+    devDependencies:
+      babel-preset-expo:
+        specifier: ^54.0.12
+        version: 54.0.12(@babel/core@7.29.7)(@babel/runtime@7.29.7)(expo@54.0.36)(react-refresh@0.14.2)
 
   modules/vora-ar: {}
 

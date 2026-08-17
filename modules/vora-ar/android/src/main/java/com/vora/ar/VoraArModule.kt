@@ -137,10 +137,16 @@ class VoraArModule : Module() {
         }
 
         // ── isSupported ─────────────────────────────────────────────────────
+        // Only SUPPORTED_INSTALLED means an AR session can actually be opened
+        // right now. Every other "supported" state (SUPPORTED_NOT_INSTALLED,
+        // SUPPORTED_APK_TOO_OLD, UNKNOWN_CHECKING/TIMED_OUT/ERROR) means
+        // Session(ctx) in startCapture() would throw immediately — reporting
+        // those as "supported" showed the AR VIO badge for a feature that was
+        // about to silently fail with no user-visible error.
         Function("isSupported") {
             val ctx: Context = appContext.reactContext ?: return@Function false
             val avail = ArCoreApk.getInstance().checkAvailability(ctx)
-            avail != ArCoreApk.Availability.UNSUPPORTED_DEVICE_NOT_CAPABLE
+            avail == ArCoreApk.Availability.SUPPORTED_INSTALLED
         }
     }
 }

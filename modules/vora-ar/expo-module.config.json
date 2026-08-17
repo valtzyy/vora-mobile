@@ -6,6 +6,7 @@
     "package": "com.vora.ar",
     "modules": [
       "com.vora.ar.VoraArModule"
-    ]
+    ],
+    "gradlePath": "android/build.gradle"
   }
 }

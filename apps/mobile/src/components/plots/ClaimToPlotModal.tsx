@@ -63,7 +63,7 @@ export default function ClaimToPlotModal({ visible, treeCode, onClose, onClaimed
           </View>
         ) : plots.length === 0 ? (
           <View style={styles.centerContainer}>
-            <Text style={styles.emptyText}>You don't have any plots yet. Create one from the Plots tab first.</Text>
+            <Text style={styles.emptyText}>You don't have any plots yet. Create one from the "My Plots" tab on your Dashboard first.</Text>
           </View>
         ) : (
           <FlatList

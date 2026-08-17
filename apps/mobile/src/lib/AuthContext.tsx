@@ -8,6 +8,11 @@ type AuthContextType = {
   /** Current Bearer token, if logged in — e.g. to forward into the splat viewer WebView. */
   token: string | null;
   isLoading: boolean;
+  /** True once the boot session check has been pending >1.5s — the free-tier
+   * Render.com backend spins down after ~15min idle, so the first request
+   * can take 30-60s to wake it back up. Lets the UI explain the wait instead
+   * of just showing a spinner indefinitely. */
+  isWakingUp: boolean;
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, password: string, displayName: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -22,6 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isWakingUp, setIsWakingUp] = useState(false);
 
   const clearSession = useCallback(async () => {
     await SecureStore.deleteItemAsync(TOKEN_KEY);
@@ -51,7 +57,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
         client.setBearerToken(storedToken);
-        const me = await client.auth.getMe();
+        const wakeupTimer = setTimeout(() => setIsWakingUp(true), 1500);
+        const me = await client.auth.getMe().finally(() => {
+          clearTimeout(wakeupTimer);
+          setIsWakingUp(false);
+        });
         if (me) {
           setUser(me);
           setToken(storedToken);
@@ -90,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoading, isWakingUp, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

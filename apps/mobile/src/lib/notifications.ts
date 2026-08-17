@@ -32,7 +32,9 @@ export function configureNotificationHandler(): void {
   });
 }
 
-/** Requested just-in-time (same pattern as camera/mic permissions elsewhere in this app), not at cold start. */
+/** Called both at app launch (App.tsx) and again here before scheduling a
+ * notification — the getPermissionsAsync() check above makes the second
+ * call a no-op if the user already granted (or denied) it at launch. */
 export async function requestNotificationPermissions(): Promise<boolean> {
   try {
     const existing = await Notifications.getPermissionsAsync();
