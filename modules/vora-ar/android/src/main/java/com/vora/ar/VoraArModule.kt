@@ -79,32 +79,40 @@ class VoraArModule : Module() {
         }
 
         // ── recordPose ──────────────────────────────────────────────────────
-        // Called from JS on a ~100ms interval while recording
+        // Called from JS on a ~100ms interval while recording.
+        //
+        // Written with a single exit point on purpose. This body is inferred
+        // as returning Any?, so a bare `return@Function` is a compile error
+        // ("expected 'Any?', actual 'Unit'") — Kotlin requires a value when
+        // the lambda's return type isn't Unit. Nesting the guards instead of
+        // early-returning sidesteps that entirely.
         Function("recordPose") {
-            val session = arSession ?: return@Function
-            val frame = try {
-                session.update()
-            } catch (e: Exception) {
-                return@Function
+            val session = arSession
+            if (session != null) {
+                val frame = try {
+                    session.update()
+                } catch (e: Exception) {
+                    null
+                }
+                val camera = frame?.camera
+                if (camera != null && camera.trackingState == TrackingState.TRACKING) {
+                    val pose = camera.pose  // world-space camera pose in metres
+                    poseLog.add(
+                        JSONObject().apply {
+                            put("frame", frameIndex++)
+                            put("x", pose.tx().toDouble())
+                            put("y", pose.ty().toDouble())
+                            put("z", pose.tz().toDouble())
+                            put("qw", pose.qw().toDouble())
+                            put("qx", pose.qx().toDouble())
+                            put("qy", pose.qy().toDouble())
+                            put("qz", pose.qz().toDouble())
+                            put("ts", System.currentTimeMillis())
+                        }
+                    )
+                }
             }
-
-            val camera = frame.camera
-            if (camera.trackingState != TrackingState.TRACKING) return@Function
-
-            val pose = camera.pose  // world-space camera pose in metres
-            val poseEntry = JSONObject().apply {
-                put("frame", frameIndex++)
-                put("x", pose.tx().toDouble())
-                put("y", pose.ty().toDouble())
-                put("z", pose.tz().toDouble())
-                put("qw", pose.qw().toDouble())
-                put("qx", pose.qx().toDouble())
-                put("qy", pose.qy().toDouble())
-                put("qz", pose.qz().toDouble())
-                put("ts", System.currentTimeMillis())
-            }
-            poseLog.add(poseEntry)
-            Unit
+            null
         }
 
         // ── stopCapture ─────────────────────────────────────────────────────
